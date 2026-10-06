@@ -1,0 +1,45 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    working_dir: /var/www/html
+
+    volumes:
+      - ./:/var/www/html
+      - vendor:/var/www/html/vendor
+
+    ports:
+      # SI QUIEREN CAMBIAR EL PUERTO DE LA APP, CAMBIEN EL 8081 POR EL PUERTO QUE QUIERAN, TAMBIEN SE CAMBIA EN EL .ENV
+      - "8081:8000"
+
+    command: >
+      sh -c "
+        composer install &&
+        php artisan serve --host=0.0.0.0 --port=8000
+      "
+
+  node:
+    image: node:22-alpine
+
+    working_dir: /var/www/html
+
+    volumes:
+      - ./:/var/www/html
+      - node_modules:/var/www/html/node_modules
+
+    ports:
+      # SI QUIEREN CAMBIAR EL PUERTO DE VITE, CAMBIEN EL 5175 POR EL PUERTO QUE QUIERAN
+      - "5175:5175"
+
+    command: >
+      sh -c "
+        npm install &&
+        npm run dev -- --host 0.0.0.0
+      "
+
+volumes:
+  vendor:
+  node_modules:
