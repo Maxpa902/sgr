@@ -76,11 +76,14 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | `latitud` | `decimal(10, 7)` | Obligatorio; ubicación en el mapa |
 | `longitud` | `decimal(10, 7)` | Obligatorio; ubicación en el mapa |
 | `direccion` | `string(255)` | Opcional (`nullable`); referencia textual de la ubicación |
+| `es_publico` | `boolean()` | Predeterminado: `true`; determina la visibilidad del reclamo |
 | `deleted_at` | `softDeletes()` | Timestamp opcional (`nullable`); fecha de baja lógica |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
 
 Para este MVP se guarda una sola foto por reclamo.
+
+En un reclamo público, los ciudadanos pueden consultarlo y participar según las reglas del sistema. En uno privado, solo pueden consultarlo su creador y el personal autorizado para gestionarlo; únicamente el creador puede votar y comentar. La visibilidad de observaciones del historial se rige además por sus reglas específicas.
 
 ### `comentarios`
 

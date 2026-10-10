@@ -50,7 +50,7 @@ Las fechas de resolución y rechazo se obtienen de `created_at` de la transició
 | `resuelto` | Obligatoria: detalle de finalización | Pública o interna |
 | `rechazado` | Obligatoria: motivo del rechazo | Siempre pública |
 
-Quien registra el cambio elige la visibilidad, excepto en el rechazo. Las observaciones públicas son visibles para ciudadanos, empleados y administradores; las internas solo para empleados y administradores y se filtran en el backend. El estado y la fecha siguen siendo visibles aunque la observación sea interna. Las observaciones del historial no son comentarios ciudadanos ni consumen su límite.
+Quien registra el cambio elige la visibilidad, excepto en el rechazo. Las observaciones internas solo son visibles para empleados y administradores y se filtran en el backend. Las observaciones públicas son visibles para todos cuando el reclamo es público; cuando es privado, solo las ven el creador y el personal autorizado para gestionarlo. El estado y la fecha respetan la privacidad general del reclamo: en un reclamo privado solo los ven esas mismas personas autorizadas. Las observaciones del historial no son comentarios ciudadanos ni consumen su límite.
 
 Los cambios automáticos del sistema respetan las mismas transiciones, condiciones y requisitos de observación y visibilidad. Por ahora no se define ninguna automatización concreta.
 

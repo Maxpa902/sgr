@@ -17,9 +17,19 @@ Este documento reúne permisos y reglas de negocio del MVP. Consultar también e
 
 Estas acciones requieren identidad aprobada y un reclamo visible sin baja lógica.
 
-- Pueden dar un like a cualquier reclamo visible en `pendiente` o `en_proceso`, incluido uno propio. Solo puede existir un voto por combinación de usuario y reclamo. Mientras siga activo, pueden quitarlo y volver a colocarlo, sin duplicar votos.
-- Pueden tener hasta **tres comentarios existentes por usuario por reclamo**, incluido uno propio, únicamente en `pendiente` o `en_proceso`. Pueden editar o eliminar solamente sus propios comentarios mientras el reclamo siga en uno de esos estados y no tenga baja lógica. Editar no consume otro lugar; eliminar libera un lugar para un nuevo comentario.
-- En `resuelto` o `rechazado` se conservan y pueden consultarse los comentarios y votos existentes, pero no se puede crear, editar o eliminar comentarios ni dar o quitar votos.
+- En reclamos públicos, pueden dar un like a cualquier reclamo visible en `pendiente` o `en_proceso`, incluido uno propio. Solo puede existir un voto por combinación de usuario y reclamo. Mientras siga activo, pueden quitarlo y volver a colocarlo, sin duplicar votos.
+- En reclamos públicos, pueden tener hasta **tres comentarios existentes por usuario por reclamo**, incluido uno propio, únicamente en `pendiente` o `en_proceso`. Pueden editar o eliminar solamente sus propios comentarios mientras el reclamo siga en uno de esos estados y no tenga baja lógica. Editar no consume otro lugar; eliminar libera un lugar para un nuevo comentario.
+- En reclamos privados, solo el creador puede votar y comentar; se aplican los mismos límites y condiciones de estado. El personal autorizado puede gestionar el reclamo y registrar observaciones al cambiar su estado, pero no puede agregar comentarios ni votos.
+- En `resuelto` o `rechazado` se conservan los comentarios y votos existentes. Pueden consultarlos quienes tengan acceso al reclamo; no se puede crear, editar o eliminar comentarios ni dar o quitar votos.
+
+## Visibilidad de reclamos
+
+- Cada reclamo es público o privado. Los reclamos son públicos por defecto.
+- Los reclamos públicos aparecen en el mapa y en las consultas ciudadanas. Cualquier ciudadano puede verlos; la interacción se rige por las reglas de comentarios y votos.
+- Los reclamos privados no aparecen en el mapa ni en listados públicos. Solo pueden consultarlos su creador, los empleados asignados directamente o por cuadrilla y los administradores.
+- La privacidad no cambia las reglas de asignación ni habilita al personal a comentar o votar. El personal autorizado registra información operativa mediante observaciones al cambiar el estado.
+- Las observaciones internas del historial solo las ven empleados y administradores. Las públicas se muestran a todos en reclamos públicos; en reclamos privados, solo al creador y al personal autorizado. El estado y la fecha también respetan la privacidad general del reclamo.
+- En el MVP, el creador elige la privacidad al crear el reclamo. No se cambia después de la creación.
 
 ## Edición y eliminación de reclamos
 
