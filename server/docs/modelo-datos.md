@@ -4,7 +4,7 @@ Este documento describe las ocho tablas, sus campos y relaciones. Consultar tamb
 
 ## Tablas
 
-- `usuarios`
+- `users`
 - `reclamos`
 - `tipos_reclamo`
 - `estados_reclamo`
@@ -17,12 +17,12 @@ Este documento describe las ocho tablas, sus campos y relaciones. Consultar tamb
 
 Los campos propios de la aplicación están en español. Se conservan en inglés los campos convencionales de Laravel. Los tipos indicados corresponden a métodos de migraciones de Laravel.
 
-### `usuarios`
+### `users`
 
 | Campo | Tipo Laravel | Restricciones / uso |
 | --- | --- | --- |
 | `id` | `id()` | Clave primaria |
-| `nombre` | `string(100)` | Obligatorio |
+| `nombre` | `string(255)` | Obligatorio; reemplaza el campo `name` convencional inicial de Laravel |
 | `apellido` | `string(100)` | Obligatorio |
 | `email` | `string(255)` | Obligatorio y único |
 | `password` | `string(255)` | Obligatorio; guardar el hash de la contraseña |
@@ -32,7 +32,7 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | `metodo_verificacion` | `string(30)` | Opcional (`nullable`); `simulacion` o nombre del proveedor utilizado |
 | `referencia_verificacion` | `string(255)` | Opcional (`nullable`); identificador de la solicitud en el proveedor; no se necesita en la simulación propia |
 | `identidad_verificada_en` | `timestamp()` | Opcional (`nullable`); fecha de aprobación; permanece vacío mientras no esté aprobada |
-| `rol` | `string(20)` | `ciudadano`, `empleado` o `admin`; predeterminado: `ciudadano` |
+| `rol` | `enum(['ciudadano', 'empleado', 'admin'])` | Predeterminado: `ciudadano` |
 | `cuadrilla_id` | `foreignId()` | Opcional (`nullable`); referencia a `cuadrillas.id`; como máximo una cuadrilla por usuario |
 | `activo` | `boolean()` | Predeterminado: `true` |
 | `email_verified_at` | `timestamp()` | Opcional (`nullable`); para verificación de correo si se incorpora |
@@ -65,10 +65,10 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | Campo | Tipo Laravel | Restricciones / uso |
 | --- | --- | --- |
 | `id` | `id()` | Clave primaria |
-| `usuario_id` | `foreignId()` | Obligatorio; referencia a `usuarios.id` (creador) |
+| `usuario_id` | `foreignId()` | Obligatorio; referencia a `users.id` (creador) |
 | `tipo_reclamo_id` | `foreignId()` | Obligatorio; referencia a `tipos_reclamo.id` |
 | `estado_id` | `foreignId()` | Obligatorio; referencia a `estados_reclamo.id`; inicialmente pendiente |
-| `empleado_id` | `foreignId()` | Opcional (`nullable`); referencia a `usuarios.id` (empleado asignado) |
+| `empleado_id` | `foreignId()` | Opcional (`nullable`); referencia a `users.id` (empleado asignado) |
 | `cuadrilla_id` | `foreignId()` | Opcional (`nullable`); referencia a `cuadrillas.id` (equipo asignado) |
 | `titulo` | `string(150)` | Obligatorio |
 | `descripcion` | `text()` | Obligatorio |
@@ -88,7 +88,7 @@ Para este MVP se guarda una sola foto por reclamo.
 | --- | --- | --- |
 | `id` | `id()` | Clave primaria |
 | `reclamo_id` | `foreignId()` | Obligatorio; referencia a `reclamos.id` |
-| `usuario_id` | `foreignId()` | Obligatorio; referencia a `usuarios.id` |
+| `usuario_id` | `foreignId()` | Obligatorio; referencia a `users.id` |
 | `contenido` | `text()` | Obligatorio |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
@@ -101,7 +101,7 @@ La edición actualiza `updated_at`. La eliminación borra el registro; no se gua
 | --- | --- | --- |
 | `id` | `id()` | Clave primaria |
 | `reclamo_id` | `foreignId()` | Obligatorio; referencia a `reclamos.id` |
-| `usuario_id` | `foreignId()` | Obligatorio; referencia a `usuarios.id` |
+| `usuario_id` | `foreignId()` | Obligatorio; referencia a `users.id` |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
 
@@ -114,7 +114,7 @@ Restricción única compuesta sobre `(usuario_id, reclamo_id)`: un usuario solo 
 | `id` | `id()` | Clave primaria |
 | `reclamo_id` | `foreignId()` | Obligatorio; referencia a `reclamos.id` |
 | `estado_id` | `foreignId()` | Obligatorio; referencia a `estados_reclamo.id` (estado al que pasó) |
-| `usuario_id` | `foreignId()` | Opcional (`nullable`); referencia a `usuarios.id` (autor del cambio); `null` indica un cambio realizado por el sistema |
+| `usuario_id` | `foreignId()` | Opcional (`nullable`); referencia a `users.id` (autor del cambio); `null` indica un cambio realizado por el sistema |
 | `observacion` | `text()` | Opcional (`nullable`) en la base; la aplicación la exige al resolver o rechazar |
 | `visibilidad` | `string(20)` | `publica` o `interna`; predeterminado: `publica`; determina quién ve la observación |
 | `created_at` | `timestamp()` | Fecha en que se registró el cambio |
@@ -133,16 +133,16 @@ El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
 
-La pertenencia se guarda en `usuarios.cuadrilla_id`: un usuario puede estar en cero o una cuadrilla y una cuadrilla puede tener muchos usuarios. Para este MVP, sus integrantes son usuarios con rol empleado. No se necesita una tabla intermedia.
+La pertenencia se guarda en `users.cuadrilla_id`: un usuario puede estar en cero o una cuadrilla y una cuadrilla puede tener muchos usuarios. Para este MVP, sus integrantes son usuarios con rol empleado. No se necesita una tabla intermedia.
 
 Un reclamo puede asignarse a una cuadrilla mediante `reclamos.cuadrilla_id`. `empleado_id` permite indicar un responsable individual opcional; si ambos campos están completos, el empleado debe pertenecer a la cuadrilla asignada.
 
 ## Convenciones estructurales
 
-- Los campos propios están en español y los convencionales de Laravel en inglés.
+- La tabla de cuentas conserva el nombre convencional `users` de Laravel; sus campos propios están en español y los campos de autenticación convencionales en inglés.
 - `id()` genera una clave primaria entera grande sin signo y autoincremental; `foreignId()` utiliza el mismo tipo compatible.
 - `created_at` y `updated_at` se crean con `timestamps()`, excepto el historial, que solo tiene `created_at`.
-- Las claves foráneas apuntan explícitamente a las tablas indicadas, porque sus nombres están en español.
+- Las claves foráneas apuntan explícitamente a las tablas indicadas.
 - `softDeletes()` agrega `deleted_at` en `reclamos`; no implica borrar las filas relacionadas. Sus condiciones se documentan en [Edición y eliminación de reclamos](reglas-sistema.md#edición-y-eliminación-de-reclamos).
 - Se conservan usuarios, categorías y cuadrillas referenciados mediante desactivación, sin eliminar sus relaciones históricas.
 - `dni` no tiene restricción de unicidad ni vincula cuentas. `email_verified_at` representa verificación de correo, independiente de la identidad.

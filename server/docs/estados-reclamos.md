@@ -58,7 +58,7 @@ Los cambios automáticos del sistema respetan las mismas transiciones, condicion
 
 | Tabla | Efecto del estado del reclamo |
 | --- | --- |
-| `usuarios` | No cambia rol ni verificación; resolver o rechazar libera un lugar del límite de reclamos activos del creador |
+| `users` | No cambia rol ni verificación; resolver o rechazar libera un lugar del límite de reclamos activos del creador |
 | `estados_reclamo` | El catálogo permanece igual; cada reclamo referencia su estado actual |
 | `historial_estados_reclamos` | Agrega un registro por transición con estado destino, autor, fecha, observación y visibilidad; permite obtener la fecha de finalización |
 | `comentarios` | Permite crear comentarios y editar o eliminar los propios solo en pendiente o en proceso; conserva y congela los existentes al finalizar |
