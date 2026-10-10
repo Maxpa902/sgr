@@ -45,7 +45,7 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | Campo | Tipo Laravel | Restricciones / uso |
 | --- | --- | --- |
 | `id` | `id()` | Clave primaria |
-| `nombre` | `string(100)` | Obligatorio y único; por ejemplo, alumbrado o baches |
+| `nombre` | `string(100)` | Obligatorio y único; ejemplos iniciales: energía eléctrica, alumbrado público, agua potable, cloacas y saneamiento, telefonía e internet |
 | `descripcion` | `text()` | Opcional (`nullable`) |
 | `activo` | `boolean()` | Predeterminado: `true` |
 | `created_at` | `timestamp()` | Fecha de creación |
