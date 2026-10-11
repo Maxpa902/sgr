@@ -57,6 +57,15 @@ docker compose ps
 docker compose logs -f app
 ```
 
+La primera vez, generá la clave de la aplicación y creá la base con sus datos iniciales (estados y categorías de reclamo):
+
+```bash
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
+```
+
+Cada vez que se agreguen migraciones nuevas, volvé a ejecutar `docker compose exec app php artisan migrate`. Los tests se ejecutan con `docker compose exec app php artisan test`.
+
 Laravel estará disponible en:
 
 - Aplicación Laravel: <http://localhost:8081>

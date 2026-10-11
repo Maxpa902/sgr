@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Database\Factories\ReclamoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -18,7 +21,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'cuadrilla_id',
     'titulo',
     'descripcion',
-    'foto',
     'latitud',
     'longitud',
     'direccion',
@@ -26,7 +28,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class Reclamo extends Model
 {
-    use SoftDeletes;
+    /** @use HasFactory<ReclamoFactory> */
+    use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
@@ -62,6 +65,11 @@ class Reclamo extends Model
         return $this->belongsTo(Cuadrilla::class, 'cuadrilla_id');
     }
 
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(FotoReclamo::class, 'reclamo_id');
+    }
+
     public function comentarios(): HasMany
     {
         return $this->hasMany(Comentario::class, 'reclamo_id');
@@ -75,6 +83,11 @@ class Reclamo extends Model
     public function historialEstados(): HasMany
     {
         return $this->hasMany(HistorialEstadoReclamo::class, 'reclamo_id');
+    }
+
+    public function sancion(): HasOne
+    {
+        return $this->hasOne(Sancion::class, 'reclamo_id');
     }
 
     #[Scope]

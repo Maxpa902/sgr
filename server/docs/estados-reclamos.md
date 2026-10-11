@@ -27,7 +27,8 @@ stateDiagram-v2
 | Creación → `pendiente` | Ciudadano verificado, incluido empleado en función ciudadana | Menos de tres reclamos propios activos; observación no necesaria |
 | `pendiente` → `en_proceso` | Empleado autorizado por la asignación o admin | Tener empleado o cuadrilla asignada; observación opcional |
 | `en_proceso` → `resuelto` | Empleado autorizado por la asignación o admin | Observación obligatoria, pública o interna |
-| `pendiente` o `en_proceso` → `rechazado` | Admin | Observación obligatoria y pública |
+| `pendiente` o `en_proceso` → `rechazado` | Admin | Observación obligatoria y pública; indicar si el reclamo era falso, lo que crea una [sanción](reglas-sistema.md#sanciones) |
+| `pendiente` o `en_proceso` → `rechazado` por falso | Empleado autorizado por la asignación | Observación obligatoria y pública; siempre crea una [sanción](reglas-sistema.md#sanciones). Los rechazos por otros motivos los hace el admin |
 
 `resuelto` y `rechazado` son estados finales: no hay reapertura, vuelta atrás ni transición entre ellos. No se permite pasar directamente de `pendiente` a `resuelto`. Los cambios se registran según [Historial y observaciones](#historial-y-observaciones).
 
@@ -58,10 +59,12 @@ Los cambios automáticos del sistema respetan las mismas transiciones, condicion
 
 | Tabla | Efecto del estado del reclamo |
 | --- | --- |
-| `users` | No cambia rol ni verificación; resolver o rechazar libera un lugar del límite de reclamos activos del creador |
+| `users` | No cambia rol ni verificación; resolver o rechazar libera un lugar del límite de reclamos activos del creador; un rechazo por falso puede completar `suspendido_hasta` |
 | `estados_reclamo` | El catálogo permanece igual; cada reclamo referencia su estado actual |
 | `historial_estados_reclamos` | Agrega un registro por transición con estado destino, autor, fecha, observación y visibilidad; permite obtener la fecha de finalización |
 | `comentarios` | Permite crear comentarios y editar o eliminar los propios solo en pendiente o en proceso; conserva y congela los existentes al finalizar |
-| `votos` | Permite dar o quitar votos solo en pendiente o en proceso; conserva los existentes al finalizar |
+| `votos` | Permite dar, cambiar o quitar votos solo en pendiente o en proceso; conserva los existentes al finalizar. Los votos nunca provocan una transición |
+| `fotos_reclamo` | Permite agregar o quitar fotos solo mientras el reclamo sea editable; conserva las existentes al finalizar |
+| `sanciones` | Un rechazo marcado como falso crea una sanción para el creador en la misma transacción; las demás transiciones no la afectan |
 | `tipos_reclamo` | La categoría no cambia por una transición de estado |
 | `cuadrillas` | No modifica integrantes; se conserva la asignación actual o final del reclamo |

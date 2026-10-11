@@ -11,6 +11,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['nombre'])]
 class EstadoReclamo extends Model
 {
+    /**
+     * Estados en los que un reclamo sigue abierto y cuenta como activo.
+     *
+     * @var list<string>
+     */
+    public const ACTIVOS = ['pendiente', 'en_proceso'];
+
     public function reclamos(): HasMany
     {
         return $this->hasMany(Reclamo::class, 'estado_id');
