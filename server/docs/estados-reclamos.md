@@ -4,7 +4,7 @@ Consultar también el [modelo de datos](modelo-datos.md) y las [reglas del siste
 
 | Estado | Significado | Cuenta para el límite de tres activos |
 | --- | --- | --- |
-| `pendiente` | Registrado; el trabajo todavía no comenzó, aunque puede estar asignado | Sí, si no tiene baja lógica |
+| `pendiente` | Registrado; el trabajo todavía no comenzó | Sí, si no tiene baja lógica |
 | `en_proceso` | Comenzó la atención del reclamo | Sí |
 | `resuelto` | El trabajo terminó | No |
 | `rechazado` | No se atenderá; tiene un motivo público | No |
@@ -24,23 +24,23 @@ stateDiagram-v2
 
 | Transición | Quién la realiza | Condiciones / detalle |
 | --- | --- | --- |
-| Creación → `pendiente` | Ciudadano verificado, incluido empleado en función ciudadana | Menos de tres reclamos propios activos; observación no necesaria |
-| `pendiente` → `en_proceso` | Empleado autorizado por la asignación o admin | Tener empleado o cuadrilla asignada; observación opcional |
-| `en_proceso` → `resuelto` | Empleado autorizado por la asignación o admin | Observación obligatoria, pública o interna |
+| Creación → `pendiente` | Vecino, u operario en función de vecino, no suspendido | Menos de tres reclamos propios activos; observación no necesaria |
+| `pendiente` → `en_proceso` | Cualquier operario o admin | Observación opcional |
+| `en_proceso` → `resuelto` | Cualquier operario o admin | Observación obligatoria, pública o interna |
 | `pendiente` o `en_proceso` → `rechazado` | Admin | Observación obligatoria y pública; indicar si el reclamo era falso, lo que crea una [sanción](reglas-sistema.md#sanciones) |
-| `pendiente` o `en_proceso` → `rechazado` por falso | Empleado autorizado por la asignación | Observación obligatoria y pública; siempre crea una [sanción](reglas-sistema.md#sanciones). Los rechazos por otros motivos los hace el admin |
+| `pendiente` o `en_proceso` → `rechazado` por falso | Cualquier operario | Observación obligatoria y pública; siempre crea una [sanción](reglas-sistema.md#sanciones). Los rechazos por otros motivos los hace el admin |
 
 `resuelto` y `rechazado` son estados finales: no hay reapertura, vuelta atrás ni transición entre ellos. No se permite pasar directamente de `pendiente` a `resuelto`. Los cambios se registran según [Historial y observaciones](#historial-y-observaciones).
 
-## Asignación y baja lógica
+No hay asignación de reclamos: cualquier operario puede tomar cualquier reclamo. El historial registra quién hizo cada transición.
 
-Asignar o reasignar no es una transición: un reclamo pendiente puede estar asignado y uno en proceso permanece en proceso si cambia su responsable. La asignación puede modificarse mientras esté pendiente o en proceso; queda sin cambios al finalizar. El historial de estados no registra reasignaciones; para el MVP solo se guarda la asignación actual o final.
+## Baja lógica
 
-La baja lógica tampoco es un estado. Solo se permite bajo las [condiciones de eliminación del ciudadano](reglas-sistema.md#edición-y-eliminación-de-reclamos). Un reclamo con `deleted_at` deja de contar como activo, no admite transiciones ni nuevas interacciones y conserva sus datos para consulta administrativa. No se contempla restauración en el MVP.
+La baja lógica no es un estado. Solo se permite bajo las [condiciones de eliminación del vecino](reglas-sistema.md#edición-y-eliminación-de-reclamos). Un reclamo con `deleted_at` deja de contar como activo, no admite transiciones ni nuevas interacciones y conserva sus datos para consulta administrativa. No se contempla restauración en el MVP.
 
 ## Historial y observaciones
 
-La creación registra el estado inicial. Cada transición actualiza `reclamos.estado_id` y `updated_at` y agrega una fila al historial dentro de una misma transacción. El autor es el usuario que actuó o `null` si fue el sistema. El historial no se edita ni se borra.
+La creación registra el estado inicial. Cada transición actualiza `reclamos.estado_id` y `updated_at` y agrega una fila al historial dentro de una misma transacción. El autor es el usuario que actuó o `null` si fue el sistema; así queda registrado qué operario trabajó en cada reclamo. El historial no se edita ni se borra.
 
 Las fechas de resolución y rechazo se obtienen de `created_at` de la transición al estado final. No se guardan `resuelto_en` ni `rechazado_en` en `reclamos`.
 
@@ -51,7 +51,7 @@ Las fechas de resolución y rechazo se obtienen de `created_at` de la transició
 | `resuelto` | Obligatoria: detalle de finalización | Pública o interna |
 | `rechazado` | Obligatoria: motivo del rechazo | Siempre pública |
 
-Quien registra el cambio elige la visibilidad, excepto en el rechazo. Las observaciones internas solo son visibles para empleados y administradores y se filtran en el backend. Las observaciones públicas son visibles para todos cuando el reclamo es público; cuando es privado, solo las ven el creador y el personal autorizado para gestionarlo. El estado y la fecha respetan la privacidad general del reclamo: en un reclamo privado solo los ven esas mismas personas autorizadas. Las observaciones del historial no son comentarios ciudadanos ni consumen su límite.
+Quien registra el cambio elige la visibilidad, excepto en el rechazo. Las observaciones internas solo son visibles para operarios y administradores y se filtran en el backend. Las observaciones públicas las ve cualquier usuario. Las observaciones del historial no son comentarios de vecinos ni consumen su límite.
 
 Los cambios automáticos del sistema respetan las mismas transiciones, condiciones y requisitos de observación y visibilidad. Por ahora no se define ninguna automatización concreta.
 
@@ -59,7 +59,7 @@ Los cambios automáticos del sistema respetan las mismas transiciones, condicion
 
 | Tabla | Efecto del estado del reclamo |
 | --- | --- |
-| `users` | No cambia rol ni verificación; resolver o rechazar libera un lugar del límite de reclamos activos del creador; un rechazo por falso puede completar `suspendido_hasta` |
+| `users` | No cambia el rol; resolver o rechazar libera un lugar del límite de reclamos activos del creador; un rechazo por falso puede completar `suspendido_hasta` |
 | `estados_reclamo` | El catálogo permanece igual; cada reclamo referencia su estado actual |
 | `historial_estados_reclamos` | Agrega un registro por transición con estado destino, autor, fecha, observación y visibilidad; permite obtener la fecha de finalización |
 | `comentarios` | Permite crear comentarios y editar o eliminar los propios solo en pendiente o en proceso; conserva y congela los existentes al finalizar |
@@ -67,4 +67,3 @@ Los cambios automáticos del sistema respetan las mismas transiciones, condicion
 | `fotos_reclamo` | Permite agregar o quitar fotos solo mientras el reclamo sea editable; conserva las existentes al finalizar |
 | `sanciones` | Un rechazo marcado como falso crea una sanción para el creador en la misma transacción; las demás transiciones no la afectan |
 | `tipos_reclamo` | La categoría no cambia por una transición de estado |
-| `cuadrillas` | No modifica integrantes; se conserva la asignación actual o final del reclamo |

@@ -21,7 +21,11 @@ class ReclamoControllerTest extends TestCase
 
     public function test_returns_pin_data_with_confirmation_and_denial_counts(): void
     {
-        $reclamo = Reclamo::factory()->create(['latitud' => -45.8641234, 'longitud' => -67.4965432]);
+        $reclamo = Reclamo::factory()->create([
+            'titulo' => 'Poste de luz caído',
+            'latitud' => -45.8641234,
+            'longitud' => -67.4965432,
+        ]);
         Voto::factory()->count(2)->for($reclamo)->create();
         Voto::factory()->desmiente()->for($reclamo)->create();
         Sanctum::actingAs(User::factory()->create());
@@ -30,12 +34,24 @@ class ReclamoControllerTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $reclamo->id)
+            ->assertJsonPath('data.0.titulo', 'Poste de luz caído')
             ->assertJsonPath('data.0.latitud', -45.8641234)
             ->assertJsonPath('data.0.longitud', -67.4965432)
             ->assertJsonPath('data.0.estado', 'pendiente')
             ->assertJsonPath('data.0.tipo.id', $reclamo->tipo_reclamo_id)
             ->assertJsonPath('data.0.confirmaciones', 2)
             ->assertJsonPath('data.0.desmentidas', 1);
+    }
+
+    public function test_uses_the_category_name_as_title_when_the_claim_has_none(): void
+    {
+        $agua = TipoReclamo::factory()->create(['nombre' => 'Agua potable']);
+        Reclamo::factory()->sinTitulo()->for($agua, 'tipoReclamo')->create();
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/reclamos')
+            ->assertOk()
+            ->assertJsonPath('data.0.titulo', 'Agua potable');
     }
 
     public function test_lists_only_public_active_claims_by_default(): void

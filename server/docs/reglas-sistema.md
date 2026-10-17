@@ -2,105 +2,110 @@
 
 Este documento reúne permisos y reglas de negocio del MVP. Consultar también el [modelo de datos](modelo-datos.md) y la [máquina de estados de reclamos](estados-reclamos.md).
 
-## Ciudadanos sin identidad verificada
+## Roles
 
-- Pueden consultar el mapa, los reclamos visibles, sus votos y sus comentarios.
-- Pueden solicitar la verificación de identidad.
-- No pueden crear o editar reclamos, votar ni crear, editar o eliminar comentarios. Se considera sin verificar cualquier estado de verificación distinto de `aprobada`.
+Hay tres roles. Todos usan la misma app móvil, con las pantallas habilitadas según el rol.
 
-## Ciudadanos con identidad verificada
+| Rol | Valor en `users.rol` | Qué hace |
+| --- | --- | --- |
+| Vecino | `ciudadano` | Carga reclamos, vota y comenta |
+| Operario | `empleado` | Atiende los reclamos y cambia su estado |
+| Admin | `admin` | Administra cuentas, categorías y sanciones |
 
-- Tienen todas las funciones de consulta anteriores.
-- Mientras estén suspendidos, solo conservan las funciones de consulta. Ver [Sanciones](#sanciones).
+## Registro
+
+- Cualquier persona puede crear una cuenta de vecino con nombre, apellido, DNI, email, contraseña y, opcionalmente, teléfono.
+- El **DNI es obligatorio** y debe tener 7 u 8 dígitos. Se aceptan puntos, espacios o guiones al escribirlo, pero se guarda solo con los números.
+- **No puede haber dos cuentas con el mismo DNI ni con el mismo email.** Se comprueba al enviar el registro; no hay una consulta previa que permita averiguar si un DNI está registrado.
+- El DNI se declara pero no se verifica: comprobar que pertenece a quien se registra queda [pendiente a futuro](#pendiente-a-futuro). Es un dato personal y la API no lo muestra a otros usuarios.
+
+## Vecinos
+
+- Pueden consultar el mapa, los reclamos, sus votos y sus comentarios.
+- Pueden cargar reclamos: eligen la categoría y escriben una descripción. El **título es opcional**; si no lo escriben, se muestra el nombre de la categoría.
 - Pueden tener como máximo **tres reclamos propios activos**. Son activos los reclamos en `pendiente` o `en_proceso` que no tengan baja lógica.
+- Mientras estén suspendidos, solo conservan las funciones de consulta. Ver [Sanciones](#sanciones).
 
 ## Comentarios y votos
 
-Estas acciones requieren identidad aprobada, no estar suspendido y un reclamo visible sin baja lógica.
+Estas acciones requieren no estar suspendido y un reclamo sin baja lógica.
 
-- En reclamos públicos de otros usuarios en `pendiente` o `en_proceso`, pueden votar `confirma` (el problema es real) o `desmiente` (no lo es). El creador no vota su propio reclamo. Solo puede existir un voto por combinación de usuario y reclamo. Mientras el reclamo siga activo, pueden cambiar el valor, quitar el voto y volver a votar, sin duplicar votos.
+- En reclamos de otros usuarios en `pendiente` o `en_proceso`, pueden votar `confirma` (el problema es real) o `desmiente` (no lo es). El creador no vota su propio reclamo. Solo puede existir un voto por combinación de usuario y reclamo. Mientras el reclamo siga activo, pueden cambiar el valor, quitar el voto y volver a votar, sin duplicar votos.
 - Los votos son una señal para el personal, no una decisión automática: ninguna cantidad de votos cambia el estado del reclamo. Las vistas de trabajo pueden destacar y ordenar los reclamos por cantidad de confirmaciones para priorizarlos.
-- En reclamos públicos, pueden tener hasta **tres comentarios existentes por usuario por reclamo**, incluido uno propio, únicamente en `pendiente` o `en_proceso`. Pueden editar o eliminar solamente sus propios comentarios mientras el reclamo siga en uno de esos estados y no tenga baja lógica. Editar no consume otro lugar; eliminar libera un lugar para un nuevo comentario.
-- En reclamos privados no hay votos, porque fuera del personal solo los ve su creador. Solo el creador puede comentar, con los mismos límites y condiciones de estado. El personal autorizado puede gestionar el reclamo y registrar observaciones al cambiar su estado, pero no puede agregar comentarios ni votos.
-- En `resuelto` o `rechazado` se conservan los comentarios y votos existentes. Pueden consultarlos quienes tengan acceso al reclamo; no se puede crear, editar o eliminar comentarios ni dar o quitar votos.
+- Pueden tener hasta **tres comentarios existentes por usuario por reclamo**, incluido uno propio, únicamente en `pendiente` o `en_proceso`. Pueden editar o eliminar solamente sus propios comentarios mientras el reclamo siga en uno de esos estados y no tenga baja lógica. Editar no consume otro lugar; eliminar libera un lugar para un nuevo comentario.
+- En `resuelto` o `rechazado` se conservan los comentarios y votos existentes. Se pueden consultar, pero no se puede crear, editar o eliminar comentarios ni dar o quitar votos.
 
 ## Visibilidad de reclamos
 
-- Cada reclamo es público o privado. Los reclamos son públicos por defecto.
-- Los reclamos públicos aparecen en el mapa y en las consultas ciudadanas. Cualquier ciudadano puede verlos; la interacción se rige por las reglas de comentarios y votos.
-- Los reclamos privados no aparecen en el mapa ni en listados públicos. Solo pueden consultarlos su creador, los empleados asignados directamente o por cuadrilla y los administradores.
-- La privacidad no cambia las reglas de asignación ni habilita al personal a comentar o votar. El personal autorizado registra información operativa mediante observaciones al cambiar el estado.
-- Las observaciones internas del historial solo las ven empleados y administradores. Las públicas se muestran a todos en reclamos públicos; en reclamos privados, solo al creador y al personal autorizado. El estado y la fecha también respetan la privacidad general del reclamo.
-- En el MVP, el creador elige la privacidad al crear el reclamo. No se cambia después de la creación.
+- Por ahora todos los reclamos son públicos: aparecen en el mapa y cualquier usuario con sesión iniciada puede verlos. Los reclamos privados quedan [pendientes a futuro](#pendiente-a-futuro).
+- Las observaciones internas del historial solo las ven operarios y administradores. Las públicas las ve cualquier usuario.
 
 ## Edición y eliminación de reclamos
 
-Estas acciones requieren identidad aprobada. Crear y editar requieren además no estar suspendido.
+Crear y editar requieren no estar suspendido.
 
-- Pueden editar el título, la descripción, las fotos y la ubicación de un reclamo propio únicamente mientras esté `pendiente`, sin asignación y sin baja lógica. La edición no permite cambiar el creador, el estado ni las asignaciones.
-- Pueden eliminar únicamente un reclamo propio que siga `pendiente`, nunca haya cambiado de estado y no esté asignado a un empleado ni a una cuadrilla. El registro inicial del historial no cuenta como cambio de estado.
-- La eliminación es una baja lógica mediante `deleted_at`. El reclamo deja de aparecer en el mapa y en las consultas ciudadanas, no admite edición del reclamo ni cambios en votos o comentarios y no cuenta para el límite de activos. Se conservan sus datos, historial, votos y comentarios para la gestión administrativa.
+- Pueden editar el título, la descripción, las fotos y la ubicación de un reclamo propio únicamente mientras esté `pendiente` y sin baja lógica. La edición no permite cambiar el creador ni el estado.
+- Pueden eliminar únicamente un reclamo propio que siga `pendiente` y nunca haya cambiado de estado. El registro inicial del historial no cuenta como cambio de estado.
+- La eliminación es una baja lógica mediante `deleted_at`. El reclamo deja de aparecer en el mapa y en las consultas de los vecinos, no admite edición del reclamo ni cambios en votos o comentarios y no cuenta para el límite de activos. Se conservan sus datos, historial, votos y comentarios para la gestión administrativa.
 
 ## Fotos de reclamos
 
 - Cada reclamo tiene entre **una y cinco fotos**, guardadas en `fotos_reclamo`. Las carga el creador al crear el reclamo o al editarlo bajo las condiciones anteriores; al editar puede agregar o quitar fotos sin quedar con menos de una.
 - La app permite sacar las fotos con la cámara o elegirlas de la galería. Las imágenes viejas o descargadas de internet se controlan con los votos `desmiente` de la comunidad y, si el reclamo resulta falso, con las [sanciones](#sanciones).
 - Por privacidad (Ley 25.326), el backend elimina los metadatos EXIF de cada foto antes de guardarla, incluida la ubicación GPS del archivo. La ubicación del reclamo es solo la indicada en el mapa.
-- Las fotos siguen la visibilidad del reclamo y se conservan ante una baja lógica, igual que el resto de sus datos.
+- Las fotos se conservan ante una baja lógica, igual que el resto de los datos del reclamo.
 
 ## Sanciones
 
-- Un reclamo se marca como **falso** al rechazarlo. Puede hacerlo el admin o el empleado autorizado por la asignación del reclamo. Solo en ese caso se crea una sanción para el creador, en la misma transacción que el cambio de estado. Un rechazo por otros motivos, por ejemplo porque el problema no corresponde a la cooperativa, no sanciona y solo lo hace el admin.
+- Un reclamo se marca como **falso** al rechazarlo. Puede hacerlo el admin o cualquier operario. Solo en ese caso se crea una sanción para el creador, en la misma transacción que el cambio de estado. Un rechazo por otros motivos, por ejemplo porque el problema no corresponde a la cooperativa, no sanciona y solo lo hace el admin.
 - Una sanción está vigente si no fue revocada y tiene menos de **180 días**.
 - Al registrar una sanción, si el usuario acumula **tres o más sanciones vigentes**, queda suspendido por **30 días**: se completa `suspendido_hasta`. No se bloquea al primer error.
-- Un usuario suspendido conserva las funciones de consulta, pero no puede crear o editar reclamos, votar ni crear, editar o eliminar comentarios. La suspensión termina sola al pasar la fecha. No afecta las funciones de trabajo de un empleado.
+- Un usuario suspendido conserva las funciones de consulta, pero no puede crear o editar reclamos, votar ni crear, editar o eliminar comentarios. La suspensión termina sola al pasar la fecha. No afecta las funciones de trabajo de un operario.
 - El admin puede revocar una sanción indicando un motivo obligatorio. La sanción se conserva con la fecha, el admin y el motivo de la revocación. Si después de revocarla quedan menos de tres sanciones vigentes, se levanta la suspensión en curso.
 - Los votos `desmiente` de la comunidad no generan sanciones por sí mismos.
 - Por ahora los plazos y el umbral son fijos. Pueden pasar a configuración si hace falta ajustarlos.
 
-## Empleados
+## Operarios
 
-- Usan la misma app móvil que los ciudadanos, con las vistas de trabajo habilitadas según su rol.
-- Pueden trabajar solos o pertenecer a una sola cuadrilla.
-- Pueden consultar todos los reclamos visibles y sus asignaciones desde la vista de trabajo.
-- Solo pueden modificar el estado de reclamos asignados directamente a ellos o a su cuadrilla actual. No pueden asignarse ni reasignar reclamos.
-- Pueden rechazar un reclamo asignado únicamente marcándolo como falso, lo que genera una [sanción](#sanciones) para su creador. No pueden revocar sanciones.
-- Los cambios de estado autorizados, sus condiciones y observaciones se definen en [Transiciones](estados-reclamos.md#transiciones).
-- Cuando usan las funciones ciudadanas, se aplican las mismas reglas y límites según su verificación de identidad. La verificación ciudadana no es un requisito para trabajar como empleado.
+- Usan la misma app móvil que los vecinos, con las vistas de trabajo habilitadas por su rol.
+- Pueden consultar todos los reclamos desde la vista de trabajo, con su historial y las observaciones internas.
+- **No hay asignación de reclamos:** cualquier operario puede tomar cualquier reclamo y cambiar su estado según [Transiciones](estados-reclamos.md#transiciones). El historial registra qué operario hizo cada cambio, con la fecha y la observación, y así queda constancia de quién trabajó en cada reclamo.
+- Pueden rechazar un reclamo únicamente marcándolo como falso, lo que genera una [sanción](#sanciones) para su creador. No pueden revocar sanciones.
+- Cuando usan las funciones de vecino (cargar reclamos, votar o comentar), se aplican las mismas reglas y límites que a cualquier vecino.
 
 ## Administradores
 
-- Usan una cuenta exclusiva e independiente, con su propio email y contraseña, sin vínculo con una cuenta personal. El rol admin no otorga automáticamente funciones ciudadanas ni de empleado. No requiere verificación ciudadana: puede conservar los campos de identidad opcionales vacíos y `estado_verificacion = no_solicitada`.
-- Pueden consultar todos los reclamos, incluidos los dados de baja, sus asignaciones e historial.
-- Gestionan categorías, cuadrillas y cuentas de empleados, y asignan o reasignan reclamos a un empleado, a una cuadrilla o a ambos. Si se asignan ambos, el empleado debe pertenecer a esa cuadrilla. Los responsables deben tener rol empleado y estar activos; la cuadrilla asignada debe estar activa.
-- La relación entre asignación y estado se define en [Asignación y baja lógica](estados-reclamos.md#asignación-y-baja-lógica).
-- No se permite cambiar de cuadrilla a un empleado ni desactivar un empleado o cuadrilla si eso afecta reclamos activos asignados. El admin primero debe finalizar o reasignar esos reclamos. No se implementa un flujo de cambios de equipo durante trabajos en curso ni un historial de pertenencia a cuadrillas.
+- Usan una cuenta exclusiva e independiente, con su propio email y contraseña, sin vínculo con una cuenta personal. El rol admin no otorga automáticamente las funciones de vecino.
+- Hacen todo desde la misma app móvil, con las vistas de administración habilitadas por su rol.
+- Pueden consultar todos los reclamos, incluidos los dados de baja, con su historial.
+- Gestionan las categorías y las cuentas de operarios.
 - Pueden gestionar cambios de estado según [Transiciones](estados-reclamos.md#transiciones). No hay edición libre del catálogo de estados.
 - Al rechazar un reclamo, indican si era falso, y pueden consultar y revocar sanciones según [Sanciones](#sanciones).
-- Pueden consultar el resultado de las solicitudes de verificación. En esta versión, la simulación del backend decide aleatoriamente la aprobación o rechazo; no hay revisión manual administrativa.
 - Pueden desactivar y reactivar cuentas, excepto desactivar su propia cuenta o dejar al sistema sin un administrador activo. No eliminan usuarios referenciados ni modifican o borran el historial.
 
 ## Reglas comunes
 
-- El backend comprueba en cada petición que la cuenta esté activa, sus permisos, la verificación y la suspensión cuando corresponda y la asignación necesaria. Una cuenta desactivada no puede usar las funciones autenticadas.
-- El registro público y la edición del perfil no permiten concederse roles, aprobar la propia identidad ni modificar asignaciones.
+- El backend comprueba en cada petición que la cuenta esté activa, sus permisos según el rol y, cuando corresponda, la suspensión. Una cuenta desactivada no puede usar las funciones autenticadas.
+- El registro público y la edición del perfil no permiten concederse roles.
 - El registro de cambios y las posibles acciones del sistema siguen [Historial y observaciones](estados-reclamos.md#historial-y-observaciones).
-- Desactivar usuarios, categorías o cuadrillas conserva sus registros y relaciones históricas. Las categorías desactivadas no se ofrecen para crear reclamos nuevos.
-
-## Verificación de identidad
-
-Para el MVP se guarda una sola solicitud vigente por cuenta, sin historial de intentos. Estos campos permiten una simulación propia o una integración con un proveedor en sandbox. Una aprobación de prueba demuestra el flujo; no acredita una identidad real.
-
-La cuenta ciudadana puede registrarse y consultar el mapa y los reclamos sin verificar su identidad. Para crear reclamos, comentar o votar, debe tener `estado_verificacion = aprobada`. Esta condición también se aplica al empleado cuando utiliza funciones ciudadanas; sus permisos de trabajo se controlan por separado mediante el rol y la asignación del reclamo.
-
-El flujo es `no_solicitada → pendiente → aprobada/rechazada`. Si se rechaza, puede volver a solicitarse y pasar a `pendiente`. Al iniciar una nueva solicitud se limpia `identidad_verificada_en` y se actualizan el método y la referencia correspondientes. No se inicia otra solicitud mientras haya una pendiente ni después de una aprobación. El usuario no puede aprobarse modificando su perfil.
-
-Para esta primera versión se usa `metodo_verificacion = simulacion`: el backend genera y guarda un resultado aleatorio por solicitud, con 50 % de probabilidad de aprobación y 50 % de rechazo. Consultar el resultado no vuelve a sortearlo. Al aprobar se completa `identidad_verificada_en`; al rechazar permanece en `null`. Se usan datos ficticios para la demostración y no se comprueba una identidad real. La integración con un proveedor en sandbox queda como posibilidad futura; su resultado se recibiría mediante una notificación validada.
-
-Después de aprobar la identidad no se permite editar `dni`, `nombre` ni `apellido`. Email y teléfono pueden cambiarse sin afectar esa aprobación; si se incorpora verificación de correo, cambiar el email exige verificar el nuevo y limpiar `email_verified_at`. No se implementa un proceso de cambio de identidad verificada en este MVP.
-
-`email_verified_at` representa la verificación del correo, independiente de la verificación de identidad. Guardar un DNI tampoco equivale a verificarlo. Por ahora `dni` no tiene restricción de unicidad ni vincula cuentas.
+- Desactivar usuarios o categorías conserva sus registros y relaciones históricas. Las categorías desactivadas no se ofrecen para crear reclamos nuevos.
 
 ## Reclamos potencialmente duplicados: mejora futura
 
 Queda pendiente investigar un criterio para detectar reclamos que describen el mismo problema. Una primera aproximación puede comparar reclamos activos por tipo y cercanía geográfica; la descripción y las fotos podrían aportar criterios adicionales. Todavía no se define distancia, algoritmo ni implementación. Esta versión no bloquea ni identifica automáticamente duplicados.
+
+## Pendiente a futuro
+
+Ideas que se sacaron del MVP para pensarlas mejor. Quedan documentadas para no perderlas.
+
+### Verificación de identidad
+
+La idea es comprobar que cada cuenta pertenece a una persona real, por ejemplo validando el DNI con un proveedor externo, antes de habilitarla para cargar reclamos. Se descartó la simulación con resultado aleatorio. Hoy el DNI se pide al registrarse y no puede repetirse, pero no se verifica. Las columnas `estado_verificacion`, `metodo_verificacion`, `referencia_verificacion` e `identidad_verificada_en` de `users` quedan reservadas para esto; hoy no se usan ni bloquean ninguna acción.
+
+### Cuadrillas y asignación de reclamos
+
+La idea es agrupar a los operarios en equipos (cuadrillas), asignarles reclamos y registrar cómo se resolvió cada uno. Se quitaron las tablas y columnas para rediseñarlo con más tiempo. Mientras tanto, cualquier operario toma cualquier reclamo y el [historial](estados-reclamos.md#historial-y-observaciones) registra quién hizo cada cambio.
+
+### Reclamos privados
+
+La idea es permitir reclamos que solo vean su creador y el personal, por ejemplo un problema dentro de un domicilio. La columna `reclamos.es_publico` queda reservada para esto, con valor `true` en todos los reclamos; las consultas del mapa ya filtran por ella.

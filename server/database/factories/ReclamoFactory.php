@@ -43,6 +43,16 @@ class ReclamoFactory extends Factory
     }
 
     /**
+     * Indicate that the citizen did not write a title, so the category is shown instead.
+     */
+    public function sinTitulo(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'titulo' => null,
+        ]);
+    }
+
+    /**
      * Indicate that only the creator and authorized staff can see the claim.
      */
     public function privado(): static

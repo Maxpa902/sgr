@@ -6,6 +6,7 @@ use Database\Factories\ReclamoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,8 +18,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'usuario_id',
     'tipo_reclamo_id',
     'estado_id',
-    'empleado_id',
-    'cuadrilla_id',
     'titulo',
     'descripcion',
     'latitud',
@@ -55,16 +54,6 @@ class Reclamo extends Model
         return $this->belongsTo(EstadoReclamo::class, 'estado_id');
     }
 
-    public function empleado(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'empleado_id');
-    }
-
-    public function cuadrilla(): BelongsTo
-    {
-        return $this->belongsTo(Cuadrilla::class, 'cuadrilla_id');
-    }
-
     public function fotos(): HasMany
     {
         return $this->hasMany(FotoReclamo::class, 'reclamo_id');
@@ -88,6 +77,14 @@ class Reclamo extends Model
     public function sancion(): HasOne
     {
         return $this->hasOne(Sancion::class, 'reclamo_id');
+    }
+
+    /**
+     * Título para mostrar: el que escribió el vecino o, si no escribió ninguno, la categoría.
+     */
+    protected function tituloVisible(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->titulo ?? $this->tipoReclamo->nombre);
     }
 
     #[Scope]

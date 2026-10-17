@@ -23,7 +23,6 @@ class UsuarioResource extends JsonResource
             'email' => $this->email,
             'telefono' => $this->telefono,
             'rol' => $this->rol,
-            'estado_verificacion' => $this->estado_verificacion,
             'suspendido_hasta' => $this->suspendido_hasta,
         ];
     }

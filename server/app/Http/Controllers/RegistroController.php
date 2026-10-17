@@ -16,7 +16,7 @@ class RegistroController extends Controller
     public function store(RegistrarUsuarioRequest $request): JsonResponse
     {
         $usuario = User::create(
-            $request->safe()->only(['nombre', 'apellido', 'email', 'password', 'telefono'])
+            $request->safe()->only(['nombre', 'apellido', 'dni', 'email', 'password', 'telefono'])
         )->refresh();
 
         $token = $usuario->createToken($request->validated('dispositivo') ?? 'app')->plainTextToken;

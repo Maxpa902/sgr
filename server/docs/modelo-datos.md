@@ -1,6 +1,6 @@
 # Modelo de datos del MVP
 
-Este documento describe las diez tablas, sus campos y relaciones. Consultar también las [reglas del sistema](reglas-sistema.md) y la [máquina de estados de reclamos](estados-reclamos.md).
+Este documento describe las nueve tablas, sus campos y relaciones. Consultar también las [reglas del sistema](reglas-sistema.md) y la [máquina de estados de reclamos](estados-reclamos.md).
 
 ## Tablas
 
@@ -12,7 +12,6 @@ Este documento describe las diez tablas, sus campos y relaciones. Consultar tamb
 - `comentarios`
 - `votos`
 - `historial_estados_reclamos`
-- `cuadrillas`
 - `sanciones`
 
 ## Campos y tipos
@@ -29,19 +28,20 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | `email` | `string(255)` | Obligatorio y único |
 | `password` | `string(255)` | Obligatorio; guardar el hash de la contraseña |
 | `telefono` | `string(30)` | Opcional (`nullable`) |
-| `dni` | `string(20)` | Opcional (`nullable`); documento declarado para solicitar la verificación |
-| `estado_verificacion` | `string(20)` | `no_solicitada`, `pendiente`, `aprobada` o `rechazada`; predeterminado: `no_solicitada` |
-| `metodo_verificacion` | `string(30)` | Opcional (`nullable`); `simulacion` o nombre del proveedor utilizado |
-| `referencia_verificacion` | `string(255)` | Opcional (`nullable`); identificador de la solicitud en el proveedor; no se necesita en la simulación propia |
-| `identidad_verificada_en` | `timestamp()` | Opcional (`nullable`); fecha de aprobación; permanece vacío mientras no esté aprobada |
-| `rol` | `enum(['ciudadano', 'empleado', 'admin'])` | Predeterminado: `ciudadano` |
-| `cuadrilla_id` | `foreignId()` | Opcional (`nullable`); referencia a `cuadrillas.id`; como máximo una cuadrilla por usuario |
+| `dni` | `string(20)` | Único; se guarda sin puntos. El registro de vecinos lo exige; en la base es opcional (`nullable`) para las cuentas que no se crean desde el registro, como la del admin |
+| `estado_verificacion` | `string(20)` | `no_solicitada`, `pendiente`, `aprobada` o `rechazada`; predeterminado: `no_solicitada`; reservado para la verificación de identidad |
+| `metodo_verificacion` | `string(30)` | Opcional (`nullable`); reservado: nombre del proveedor de verificación |
+| `referencia_verificacion` | `string(255)` | Opcional (`nullable`); reservado: identificador de la solicitud en el proveedor |
+| `identidad_verificada_en` | `timestamp()` | Opcional (`nullable`); reservado: fecha de aprobación de la identidad |
+| `rol` | `enum(['ciudadano', 'empleado', 'admin'])` | Predeterminado: `ciudadano`; `ciudadano` es el vecino y `empleado`, el operario |
 | `activo` | `boolean()` | Predeterminado: `true` |
 | `suspendido_hasta` | `timestamp()` | Opcional (`nullable`); fin de la suspensión por sanciones; la cuenta está suspendida mientras la fecha sea futura |
 | `email_verified_at` | `timestamp()` | Opcional (`nullable`); para verificación de correo si se incorpora |
 | `remember_token` | `rememberToken()` | Opcional; para la función de recordar sesión de Laravel |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
+
+Los campos de verificación de identidad (`estado_verificacion`, `metodo_verificacion`, `referencia_verificacion` e `identidad_verificada_en`) quedan reservados para una funcionalidad futura y hoy no se usan. Ver [Pendiente a futuro](reglas-sistema.md#pendiente-a-futuro).
 
 ### `tipos_reclamo`
 
@@ -71,21 +71,19 @@ Los campos propios de la aplicación están en español. Se conservan en inglés
 | `usuario_id` | `foreignId()` | Obligatorio; referencia a `users.id` (creador) |
 | `tipo_reclamo_id` | `foreignId()` | Obligatorio; referencia a `tipos_reclamo.id` |
 | `estado_id` | `foreignId()` | Obligatorio; referencia a `estados_reclamo.id`; inicialmente pendiente |
-| `empleado_id` | `foreignId()` | Opcional (`nullable`); referencia a `users.id` (empleado asignado) |
-| `cuadrilla_id` | `foreignId()` | Opcional (`nullable`); referencia a `cuadrillas.id` (equipo asignado) |
-| `titulo` | `string(150)` | Obligatorio |
+| `titulo` | `string(150)` | Opcional (`nullable`); si está vacío, se muestra el nombre de la categoría |
 | `descripcion` | `text()` | Obligatorio |
 | `latitud` | `decimal(10, 7)` | Obligatorio; ubicación en el mapa |
 | `longitud` | `decimal(10, 7)` | Obligatorio; ubicación en el mapa |
 | `direccion` | `string(255)` | Opcional (`nullable`); referencia textual de la ubicación |
-| `es_publico` | `boolean()` | Predeterminado: `true`; determina la visibilidad del reclamo |
+| `es_publico` | `boolean()` | Predeterminado: `true`; reservado para los reclamos privados; hoy todos los reclamos son públicos |
 | `deleted_at` | `softDeletes()` | Timestamp opcional (`nullable`); fecha de baja lógica |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
 
 Las fotos se guardan en `fotos_reclamo`; cada reclamo tiene entre una y cinco.
 
-En un reclamo público, los ciudadanos pueden consultarlo y participar según las reglas del sistema. En uno privado, solo pueden consultarlo su creador y el personal autorizado para gestionarlo; únicamente el creador puede comentar y nadie vota. La visibilidad de observaciones del historial se rige además por sus reglas específicas.
+Por ahora todos los reclamos son públicos. Los reclamos privados quedan [pendientes a futuro](reglas-sistema.md#pendiente-a-futuro).
 
 ### `fotos_reclamo`
 
@@ -137,23 +135,9 @@ Restricción única compuesta sobre `(usuario_id, reclamo_id)`: un usuario solo 
 | `visibilidad` | `string(20)` | `publica` o `interna`; predeterminado: `publica`; determina quién ve la observación |
 | `created_at` | `timestamp()` | Fecha en que se registró el cambio |
 
-El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por `created_at` y, ante fechas iguales, por `id`. `usuario_id = null` representa al sistema; no se necesita un usuario ficticio.
+El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por `created_at` y, ante fechas iguales, por `id`. `usuario_id = null` representa al sistema; no se necesita un usuario ficticio. Como no hay asignación de reclamos, `usuario_id` es el registro de qué operario trabajó en cada reclamo.
 
 `reclamos.estado_id` guarda el estado actual. Las fechas finales se obtienen del historial, sin campos `resuelto_en` ni `rechazado_en` en `reclamos`. La observación del rechazo usa `observacion`, sin un campo `motivo_rechazo` separado. Las reglas de registro, transacciones y visibilidad están en [Historial y observaciones](estados-reclamos.md#historial-y-observaciones).
-
-### `cuadrillas`
-
-| Campo | Tipo Laravel | Restricciones / uso |
-| --- | --- | --- |
-| `id` | `id()` | Clave primaria |
-| `nombre` | `string(100)` | Obligatorio y único |
-| `activo` | `boolean()` | Predeterminado: `true` |
-| `created_at` | `timestamp()` | Fecha de creación |
-| `updated_at` | `timestamp()` | Fecha de última actualización |
-
-La pertenencia se guarda en `users.cuadrilla_id`: un usuario puede estar en cero o una cuadrilla y una cuadrilla puede tener muchos usuarios. Para este MVP, sus integrantes son usuarios con rol empleado. No se necesita una tabla intermedia.
-
-Un reclamo puede asignarse a una cuadrilla mediante `reclamos.cuadrilla_id`. `empleado_id` permite indicar un responsable individual opcional; si ambos campos están completos, el empleado debe pertenecer a la cuadrilla asignada.
 
 ### `sanciones`
 
@@ -177,15 +161,14 @@ Un reclamo genera como máximo una sanción. `usuario_id` repite el creador del 
 - `created_at` y `updated_at` se crean con `timestamps()`, excepto el historial, que solo tiene `created_at`.
 - Las claves foráneas apuntan explícitamente a las tablas indicadas.
 - `softDeletes()` agrega `deleted_at` en `reclamos`; no implica borrar las filas relacionadas. Sus condiciones se documentan en [Edición y eliminación de reclamos](reglas-sistema.md#edición-y-eliminación-de-reclamos).
-- Se conservan usuarios, categorías y cuadrillas referenciados mediante desactivación, sin eliminar sus relaciones históricas.
-- `dni` no tiene restricción de unicidad ni vincula cuentas. `email_verified_at` representa verificación de correo, independiente de la identidad.
+- Se conservan usuarios y categorías referenciados mediante desactivación, sin eliminar sus relaciones históricas.
+- `dni` y `email` son únicos: no puede haber dos cuentas con el mismo valor. `email_verified_at` representa verificación de correo, independiente de la identidad.
 
 ## Cardinalidades
 
 | Relación | Cardinalidad |
 | --- | --- |
 | Usuario → reclamos creados | 1-M |
-| Usuario empleado → reclamos asignados | 1-M |
 | Tipo de reclamo → reclamos | 1-M |
 | Estado de reclamo → reclamos | 1-M |
 | Usuario → comentarios | 1-M |
@@ -195,8 +178,6 @@ Un reclamo genera como máximo una sanción. `usuario_id` repite el creador del 
 | Reclamo → historial de estados | 1-M |
 | Estado de reclamo → registros del historial | 1-M |
 | Usuario → cambios de estado realizados | 1-M |
-| Cuadrilla → usuarios integrantes | 1-M |
-| Cuadrilla → reclamos asignados | 1-M |
 | Reclamo → fotos | 1-M |
 | Usuario → sanciones recibidas | 1-M |
 | Usuario admin → sanciones revocadas | 1-M |
@@ -204,9 +185,7 @@ Un reclamo genera como máximo una sanción. `usuario_id` repite el creador del 
 
 `1-M` y `M-1` representan la misma relación vista desde lados opuestos.
 
-Cada reclamo tiene un usuario creador, un tipo y un estado. Puede tener cero o un empleado asignado y cero o una cuadrilla asignada. El empleado es un usuario con rol empleado.
-
-Cada usuario pertenece a cero o una cuadrilla. Cada registro del historial pertenece a un reclamo y un estado, y tiene cero o un usuario autor: sin usuario, el cambio corresponde al sistema.
+Cada reclamo tiene un usuario creador, un tipo y un estado. Cada registro del historial pertenece a un reclamo y un estado, y tiene cero o un usuario autor: sin usuario, el cambio corresponde al sistema.
 
 Del lado de muchos puede haber cero registros: por ejemplo, un reclamo puede no tener comentarios ni votos. La excepción son las fotos: la aplicación exige al menos una por reclamo.
 

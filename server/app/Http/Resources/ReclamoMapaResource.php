@@ -20,7 +20,7 @@ class ReclamoMapaResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'titulo' => $this->titulo,
+            'titulo' => $this->titulo_visible,
             'latitud' => (float) $this->latitud,
             'longitud' => (float) $this->longitud,
             'tipo' => new TipoReclamoResource($this->whenLoaded('tipoReclamo')),

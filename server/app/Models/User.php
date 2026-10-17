@@ -7,7 +7,6 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -43,19 +42,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function cuadrilla(): BelongsTo
-    {
-        return $this->belongsTo(Cuadrilla::class, 'cuadrilla_id');
-    }
-
     public function reclamos(): HasMany
     {
         return $this->hasMany(Reclamo::class, 'usuario_id');
-    }
-
-    public function reclamosAsignados(): HasMany
-    {
-        return $this->hasMany(Reclamo::class, 'empleado_id');
     }
 
     public function comentarios(): HasMany

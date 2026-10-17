@@ -10,7 +10,7 @@ sgr/
 └── server/   # API Laravel y entorno local con Docker Compose
 ```
 
-La app de bienvenida incluye un botón para consultar `GET /api/status` y mostrar si el servidor responde.
+La app abre en la pantalla de inicio de sesión. Desde ahí se puede crear una cuenta de vecino (con DNI) o ingresar con una existente; la sesión queda guardada en el celular hasta que se cierra.
 
 ## Requisitos
 
@@ -19,6 +19,7 @@ La app de bienvenida incluye un botón para consultar `GET /api/status` y mostra
 - Flutter SDK, incluyendo Dart
 - Para Android: Android Studio, Android SDK y un emulador configurado, o un dispositivo Android con depuración USB
 - Para iOS: macOS y Xcode; se puede usar el simulador de iOS o un iPhone configurado para desarrollo
+- En Windows: el **Modo de desarrollador** activado (*Configuración → Sistema → Para programadores*). Flutter lo necesita para compilar apps con plugins, como el que guarda la sesión
 
 Comprobá las herramientas con:
 
@@ -92,6 +93,8 @@ flutter devices
 
 `flutter devices` muestra los destinos disponibles. Elegí uno de los siguientes métodos.
 
+Los tests de la app se ejecutan con `flutter test` desde la carpeta `mobile`. Simulan las respuestas del servidor, así que no necesitan Docker.
+
 ### Chrome
 
 Iniciá el servidor Laravel en Docker y ejecutá:
@@ -153,4 +156,4 @@ La app acepta la URL base del servidor con `--dart-define=SERVER_URL=...`. El va
 | Teléfono físico en la misma red | `http://IP_LOCAL_DE_LA_PC:8081` |
 | iOS Simulator en Mac | `http://localhost:8081` |
 
-`SERVER_URL` es la URL base; la app agrega `/api/status` al consultarla. En producción se debe configurar un dominio con HTTPS y quitar los permisos de HTTP sin cifrar habilitados para el desarrollo local.
+`SERVER_URL` es la URL base; la app le agrega las rutas de la API, por ejemplo `/api/login`. Se define en `mobile/lib/config.dart`. En producción se debe configurar un dominio con HTTPS y quitar los permisos de HTTP sin cifrar habilitados para el desarrollo local.
