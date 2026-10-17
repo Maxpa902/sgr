@@ -19,6 +19,7 @@ class TipoReclamoSeeder extends Seeder
             [
                 'nombre' => 'Energía eléctrica',
                 'descripcion' => 'Cortes, fallas u otros problemas del servicio eléctrico.',
+                'icono' => 'electricidad',
                 'activo' => true,
                 'created_at' => $ahora,
                 'updated_at' => $ahora,
@@ -26,6 +27,7 @@ class TipoReclamoSeeder extends Seeder
             [
                 'nombre' => 'Alumbrado público',
                 'descripcion' => 'Luminarias apagadas, dañadas o con funcionamiento irregular en la vía pública.',
+                'icono' => 'alumbrado',
                 'activo' => true,
                 'created_at' => $ahora,
                 'updated_at' => $ahora,
@@ -33,6 +35,7 @@ class TipoReclamoSeeder extends Seeder
             [
                 'nombre' => 'Agua potable',
                 'descripcion' => 'Cortes, pérdidas u otros problemas del servicio de agua potable.',
+                'icono' => 'agua',
                 'activo' => true,
                 'created_at' => $ahora,
                 'updated_at' => $ahora,
@@ -40,6 +43,7 @@ class TipoReclamoSeeder extends Seeder
             [
                 'nombre' => 'Cloacas y saneamiento',
                 'descripcion' => 'Obstrucciones, pérdidas u otros problemas de la red cloacal.',
+                'icono' => 'cloacas',
                 'activo' => true,
                 'created_at' => $ahora,
                 'updated_at' => $ahora,
@@ -47,10 +51,11 @@ class TipoReclamoSeeder extends Seeder
             [
                 'nombre' => 'Telefonía e internet',
                 'descripcion' => 'Interrupciones u otros problemas del servicio de telefonía o internet.',
+                'icono' => 'telefonia',
                 'activo' => true,
                 'created_at' => $ahora,
                 'updated_at' => $ahora,
             ],
-        ], ['nombre'], ['descripcion', 'activo', 'updated_at']);
+        ], ['nombre'], ['descripcion', 'icono', 'activo', 'updated_at']);
     }
 }

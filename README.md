@@ -67,6 +67,22 @@ docker compose exec app php artisan migrate --seed
 
 Cada vez que se agreguen migraciones nuevas, volvé a ejecutar `docker compose exec app php artisan migrate`. Los tests se ejecutan con `docker compose exec app php artisan test`.
 
+### Datos de prueba
+
+Para ver el mapa con reclamos, cargá los datos de demostración: cuentas de cada rol y 25 reclamos en barrios de Comodoro Rivadavia, Rada Tilly y Caleta Córdova.
+
+```bash
+docker compose exec app php artisan db:seed --class=DemoSeeder
+```
+
+| Cuenta | Rol | Contraseña |
+| --- | --- | --- |
+| `vecino@sgr.test` | Vecino | `password` |
+| `operario@sgr.test` | Operario | `password` |
+| `admin@sgr.test` | Admin | `password` |
+
+Además se crean `vecino1@sgr.test` a `vecino15@sgr.test`, que votan los reclamos. Si los datos ya estaban cargados, el comando no hace nada. Son solo para desarrollo: nunca ejecutar este seeder en una base real.
+
 Laravel estará disponible en:
 
 - Aplicación Laravel: <http://localhost:8081>
@@ -124,6 +140,8 @@ flutter run -d android --dart-define=SERVER_URL=http://10.0.2.2:8081
 ```
 
 En Android Emulator, `10.0.2.2` permite acceder al `localhost` de la computadora anfitriona. No reemplazar por `localhost`, porque dentro del emulador esa dirección apunta al propio emulador.
+
+El emulador simula estar en California, así que el botón "Mi ubicación" del mapa avisa que estás fuera de la zona. Para probarlo, abrí los controles extendidos del emulador (botón `⋯`), entrá en **Location**, buscá "Comodoro Rivadavia" y tocá **Set location**.
 
 ### Teléfono Android físico
 

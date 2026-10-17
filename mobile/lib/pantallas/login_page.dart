@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api_exception.dart';
+import '../mapa/zona.dart';
 import '../sesion/sesion.dart';
 import '../validaciones.dart';
 import '../widgets/mensaje_error.dart';
@@ -96,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Reclamos de servicios en Comodoro Rivadavia',
+                        'Reclamos de servicios en ${ZonaDelMapa.nombre}',
                         textAlign: TextAlign.center,
                         style: textos.bodyLarge,
                       ),

@@ -42,6 +42,32 @@ void main() {
     expect(pedido.headers['Authorization'], 'Bearer 1|abc');
   });
 
+  test(
+    'asks for the map claims with the chosen states and categories',
+    () async {
+      late http.Request pedido;
+      final api = clienteDePrueba((request) async {
+        pedido = request;
+        return respuestaJson({
+          'data': [reclamoJson(titulo: 'Cable caído')],
+        }, 200);
+      });
+
+      final reclamos = await api.reclamosDelMapa(
+        estados: {'pendiente', 'resuelto'},
+        tipos: {3},
+      );
+
+      expect(reclamos.single.titulo, 'Cable caído');
+      expect(pedido.url.path, '/api/reclamos');
+      expect(pedido.url.queryParametersAll['estados[]'], [
+        'pendiente',
+        'resuelto',
+      ]);
+      expect(pedido.url.queryParametersAll['tipos[]'], ['3']);
+    },
+  );
+
   test('turns a 422 response into the first error of each field', () async {
     final api = clienteDePrueba(
       (_) async => respuestaJson({

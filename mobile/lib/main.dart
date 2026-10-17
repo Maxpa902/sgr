@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'api/api_client.dart';
 import 'config.dart';
 import 'pantallas/cargando_page.dart';
-import 'pantallas/inicio_page.dart';
 import 'pantallas/login_page.dart';
+import 'pantallas/mapa_page.dart';
 import 'pantallas/sin_conexion_page.dart';
 import 'sesion/almacen_token.dart';
 import 'sesion/sesion.dart';
@@ -23,9 +23,12 @@ void main() {
 }
 
 class SgrApp extends StatelessWidget {
-  const SgrApp({super.key, required this.sesion});
+  const SgrApp({super.key, required this.sesion, this.mostrarMapaBase = true});
 
   final Sesion sesion;
+
+  /// Los tests lo apagan para que el mapa no descargue imágenes de internet.
+  final bool mostrarMapaBase;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +48,10 @@ class SgrApp extends StatelessWidget {
             alReintentar: sesion.restaurar,
           ),
           EstadoSesion.sinSesion => LoginPage(sesion: sesion),
-          EstadoSesion.conSesion => InicioPage(sesion: sesion),
+          EstadoSesion.conSesion => MapaPage(
+            sesion: sesion,
+            mostrarMapaBase: mostrarMapaBase,
+          ),
         },
       ),
     );

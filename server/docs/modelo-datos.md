@@ -50,6 +50,7 @@ Los campos de verificación de identidad (`estado_verificacion`, `metodo_verific
 | `id` | `id()` | Clave primaria |
 | `nombre` | `string(100)` | Obligatorio y único; ejemplos iniciales: energía eléctrica, alumbrado público, agua potable, cloacas y saneamiento, telefonía e internet |
 | `descripcion` | `text()` | Opcional (`nullable`) |
+| `icono` | `string(30)` | Opcional (`nullable`); clave del ícono que muestra la app: `electricidad`, `alumbrado`, `agua`, `cloacas` o `telefonia`. Sin valor, la app usa un ícono genérico |
 | `activo` | `boolean()` | Predeterminado: `true` |
 | `created_at` | `timestamp()` | Fecha de creación |
 | `updated_at` | `timestamp()` | Fecha de última actualización |

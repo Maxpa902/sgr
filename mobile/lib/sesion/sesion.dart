@@ -35,6 +35,10 @@ class Sesion extends ChangeNotifier {
 
   EstadoSesion get estado => _estado;
 
+  /// El cliente que tiene el token de esta sesión. Las pantallas lo usan para
+  /// pedirle datos al server en nombre del usuario logueado.
+  ApiClient get api => _api;
+
   /// El usuario logueado, o `null` si no hay sesión.
   Usuario? get usuario => _usuario;
 

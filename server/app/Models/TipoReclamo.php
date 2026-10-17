@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Table('tipos_reclamo')]
-#[Fillable(['nombre', 'descripcion', 'activo'])]
+#[Fillable(['nombre', 'descripcion', 'icono', 'activo'])]
 class TipoReclamo extends Model
 {
     /** @use HasFactory<TipoReclamoFactory> */
