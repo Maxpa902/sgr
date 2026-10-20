@@ -12,7 +12,10 @@ class SesionControllerTest extends TestCase
 
     public function test_valid_credentials_return_a_token_for_the_user(): void
     {
-        $usuario = User::factory()->create(['email' => 'ana@example.com']);
+        $usuario = User::factory()->create([
+            'email' => 'ana@example.com',
+            'rol' => 'admin',
+        ]);
 
         $response = $this->postJson('/api/login', [
             'email' => 'ana@example.com',
@@ -21,6 +24,7 @@ class SesionControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('usuario.id', $usuario->id)
+            ->assertJsonPath('usuario.rol', 'admin')
             ->assertJsonStructure(['token']);
         $this->assertSame(1, $usuario->tokens()->count());
     }

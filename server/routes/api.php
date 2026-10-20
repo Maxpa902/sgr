@@ -5,6 +5,7 @@ use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\SesionController;
 use App\Http\Controllers\TipoReclamoController;
 use App\Http\Controllers\UsuarioActualController;
+use App\Http\Controllers\UsuarioController;
 use App\Http\Middleware\AsegurarCuentaActiva;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +29,8 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::get('/usuario', [UsuarioActualController::class, 'show'])->name('usuario.show');
     Route::get('/tipos-reclamo', [TipoReclamoController::class, 'index'])->name('tipos-reclamo.index');
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
+
+    Route::middleware('rol:admin')->group(function (): void {
+        Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+    });
 });

@@ -38,6 +38,9 @@ class Sesion extends ChangeNotifier {
   /// El usuario logueado, o `null` si no hay sesión.
   Usuario? get usuario => _usuario;
 
+  /// Consulta el directorio de cuentas del sistema (el server exige rol admin).
+  Future<List<Usuario>> listarUsuarios() => _api.listarUsuarios();
+
   /// Al abrir la app: si hay un token guardado, le pregunta al server si
   /// todavía sirve.
   Future<void> restaurar() async {

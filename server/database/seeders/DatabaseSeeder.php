@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EstadoReclamoSeeder::class,
             TipoReclamoSeeder::class,
+            UsuarioDemoSeeder::class,
         ]);
     }
 }

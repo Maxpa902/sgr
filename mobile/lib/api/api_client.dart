@@ -68,6 +68,19 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  /// Todas las cuentas, ordenadas por apellido y nombre. Disponible solo para admin.
+  Future<List<Usuario>> listarUsuarios() async {
+    final json = await _get('/api/usuarios');
+    final data = json['data'];
+    if (data is! List) {
+      return [];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(Usuario.fromJson)
+        .toList(growable: false);
+  }
+
   /// Revoca el [token] en el server.
   Future<void> cerrarSesion() async {
     await _post('/api/logout');

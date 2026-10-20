@@ -5,6 +5,7 @@ import 'config.dart';
 import 'pantallas/cargando_page.dart';
 import 'pantallas/inicio_page.dart';
 import 'pantallas/login_page.dart';
+import 'pantallas/panel_interno_page.dart';
 import 'pantallas/sin_conexion_page.dart';
 import 'sesion/almacen_token.dart';
 import 'sesion/sesion.dart';
@@ -45,9 +46,19 @@ class SgrApp extends StatelessWidget {
             alReintentar: sesion.restaurar,
           ),
           EstadoSesion.sinSesion => LoginPage(sesion: sesion),
-          EstadoSesion.conSesion => InicioPage(sesion: sesion),
+          EstadoSesion.conSesion => _inicioDeSesion(sesion),
         },
       ),
     );
+  }
+
+  Widget _inicioDeSesion(Sesion sesion) {
+    final usuario = sesion.usuario!;
+
+    if (usuario.esAdmin || usuario.esOperario) {
+      return PanelInternoPage(sesion: sesion);
+    }
+
+    return InicioPage(sesion: sesion);
   }
 }
