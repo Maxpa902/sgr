@@ -12,6 +12,7 @@
 
 return [
 
+    'array' => 'El campo :attribute debe ser una lista.',
     'confirmed' => 'La confirmación de :attribute no coincide.',
     'digits_between' => 'El campo :attribute debe tener entre :min y :max dígitos.',
     'email' => 'El campo :attribute debe ser un email válido.',
@@ -41,11 +42,13 @@ return [
         'dispositivo' => 'dispositivo',
         'dni' => 'DNI',
         'email' => 'email',
-        'estado' => 'estado',
+        'estados' => 'estados',
+        'estados.*' => 'estado',
         'nombre' => 'nombre',
         'password' => 'contraseña',
         'telefono' => 'teléfono',
-        'tipo_reclamo_id' => 'categoría',
+        'tipos' => 'categorías',
+        'tipos.*' => 'categoría',
     ],
 
 ];

@@ -70,37 +70,51 @@ class ReclamoControllerTest extends TestCase
         $this->assertEqualsCanonicalizing([$pendiente->id, $enProceso->id], $response->json('data.*.id'));
     }
 
-    public function test_estado_filter_returns_only_claims_in_that_state(): void
+    public function test_estados_filter_returns_claims_in_any_of_the_given_states(): void
     {
-        Reclamo::factory()->create();
+        $pendiente = Reclamo::factory()->create();
+        Reclamo::factory()->enEstado('en_proceso')->create();
         $resuelto = Reclamo::factory()->enEstado('resuelto')->create();
         Sanctum::actingAs(User::factory()->create());
 
-        $response = $this->getJson('/api/reclamos?estado=resuelto');
+        $response = $this->getJson('/api/reclamos?estados[]=pendiente&estados[]=resuelto');
 
         $response->assertOk();
-        $this->assertSame([$resuelto->id], $response->json('data.*.id'));
+        $this->assertEqualsCanonicalizing([$pendiente->id, $resuelto->id], $response->json('data.*.id'));
     }
 
-    public function test_tipo_filter_returns_only_claims_of_that_category(): void
+    public function test_tipos_filter_returns_only_claims_of_the_given_categories(): void
     {
         $agua = TipoReclamo::factory()->create();
+        $luz = TipoReclamo::factory()->create();
         $reclamoDeAgua = Reclamo::factory()->for($agua, 'tipoReclamo')->create();
+        $reclamoDeLuz = Reclamo::factory()->for($luz, 'tipoReclamo')->create();
         Reclamo::factory()->create();
         Sanctum::actingAs(User::factory()->create());
 
-        $response = $this->getJson("/api/reclamos?tipo_reclamo_id={$agua->id}");
+        $response = $this->getJson("/api/reclamos?tipos[]={$agua->id}&tipos[]={$luz->id}");
 
         $response->assertOk();
-        $this->assertSame([$reclamoDeAgua->id], $response->json('data.*.id'));
+        $this->assertEqualsCanonicalizing([$reclamoDeAgua->id, $reclamoDeLuz->id], $response->json('data.*.id'));
+    }
+
+    public function test_includes_the_category_icon_for_the_pin(): void
+    {
+        $agua = TipoReclamo::factory()->create(['icono' => 'agua']);
+        Reclamo::factory()->for($agua, 'tipoReclamo')->create();
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/reclamos')
+            ->assertOk()
+            ->assertJsonPath('data.0.tipo.icono', 'agua');
     }
 
     public function test_rejects_unknown_estado_with_422(): void
     {
         Sanctum::actingAs(User::factory()->create());
 
-        $this->getJson('/api/reclamos?estado=archivado')
+        $this->getJson('/api/reclamos?estados[]=archivado')
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['estado']);
+            ->assertJsonValidationErrors(['estados.0' => 'El estado seleccionado no existe.']);
     }
 }

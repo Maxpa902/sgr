@@ -13,23 +13,26 @@ use Illuminate\Validation\Rule;
 class ReclamoController extends Controller
 {
     /**
-     * Lista los reclamos públicos para el mapa. Sin filtro de estado devuelve solo los activos.
+     * Lista los reclamos públicos para el mapa. Sin filtro de estados devuelve solo los activos.
+     * Acepta varios estados y categorías: `?estados[]=pendiente&estados[]=resuelto&tipos[]=3`.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $filtros = $request->validate([
-            'estado' => ['sometimes', 'string', Rule::exists('estados_reclamo', 'nombre')],
-            'tipo_reclamo_id' => ['sometimes', 'integer', Rule::exists('tipos_reclamo', 'id')],
+            'estados' => ['sometimes', 'array'],
+            'estados.*' => ['string', Rule::exists('estados_reclamo', 'nombre')],
+            'tipos' => ['sometimes', 'array'],
+            'tipos.*' => ['integer', Rule::exists('tipos_reclamo', 'id')],
         ]);
 
-        $estados = isset($filtros['estado']) ? [$filtros['estado']] : EstadoReclamo::ACTIVOS;
+        $estados = $filtros['estados'] ?? EstadoReclamo::ACTIVOS;
 
         $reclamos = Reclamo::query()
             ->publicos()
             ->whereHas('estado', fn (Builder $query) => $query->whereIn('nombre', $estados))
             ->when(
-                isset($filtros['tipo_reclamo_id']),
-                fn (Builder $query) => $query->where('tipo_reclamo_id', $filtros['tipo_reclamo_id']),
+                isset($filtros['tipos']),
+                fn (Builder $query) => $query->whereIn('tipo_reclamo_id', $filtros['tipos']),
             )
             ->with(['tipoReclamo', 'estado'])
             ->withCount([

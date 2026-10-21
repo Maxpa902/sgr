@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../modelos/reclamo_mapa.dart';
+import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'api_exception.dart';
 
@@ -86,6 +88,34 @@ class ApiClient {
     await _post('/api/logout');
   }
 
+  /// Las categorías que se ofrecen para cargar y filtrar reclamos.
+  Future<List<TipoReclamo>> tiposDeReclamo() async {
+    final json = await _get('/api/tipos-reclamo');
+    return [
+      for (final tipo in json['data'] as List)
+        TipoReclamo.fromJson(tipo as Map<String, dynamic>),
+    ];
+  }
+
+  /// Los reclamos públicos para el mapa, en alguno de los [estados].
+  /// Si se pasan [tipos], solo los de esas categorías.
+  Future<List<ReclamoMapa>> reclamosDelMapa({
+    required Set<String> estados,
+    Set<int>? tipos,
+  }) async {
+    final json = await _get(
+      '/api/reclamos',
+      parametros: {
+        'estados[]': estados.toList(),
+        if (tipos != null) 'tipos[]': [for (final tipo in tipos) '$tipo'],
+      },
+    );
+    return [
+      for (final reclamo in json['data'] as List)
+        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
+    ];
+  }
+
   SesionIniciada _sesionDesde(Map<String, dynamic> json) {
     return SesionIniciada(
       token: json['token'] as String,
@@ -93,8 +123,13 @@ class ApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> _get(String ruta) {
-    return _procesar(_http.get(_uri(ruta), headers: _encabezados()));
+  Future<Map<String, dynamic>> _get(
+    String ruta, {
+    Map<String, Object>? parametros,
+  }) {
+    return _procesar(
+      _http.get(_uri(ruta, parametros), headers: _encabezados()),
+    );
   }
 
   Future<Map<String, dynamic>> _post(
@@ -110,7 +145,12 @@ class ApiClient {
     );
   }
 
-  Uri _uri(String ruta) => Uri.parse('$baseUrl$ruta');
+  /// Arma la dirección completa. Los [parametros] van después del `?`; un valor
+  /// que es una lista se repite: `estados[]=pendiente&estados[]=resuelto`.
+  Uri _uri(String ruta, [Map<String, Object>? parametros]) {
+    final uri = Uri.parse('$baseUrl$ruta');
+    return parametros == null ? uri : uri.replace(queryParameters: parametros);
+  }
 
   Map<String, String> _encabezados({bool conCuerpo = false}) {
     return {

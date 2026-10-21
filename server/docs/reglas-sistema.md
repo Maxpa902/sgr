@@ -40,6 +40,14 @@ Estas acciones requieren no estar suspendido y un reclamo sin baja lógica.
 - Por ahora todos los reclamos son públicos: aparecen en el mapa y cualquier usuario con sesión iniciada puede verlos. Los reclamos privados quedan [pendientes a futuro](#pendiente-a-futuro).
 - Las observaciones internas del historial solo las ven operarios y administradores. Las públicas las ve cualquier usuario.
 
+## Mapa
+
+- El mapa cubre **Comodoro Rivadavia (incluida Caleta Córdova) y Rada Tilly**, y no permite moverse fuera de esa zona.
+- Al abrirlo muestra los reclamos activos (`pendiente` y `en_proceso`). Los filtros permiten sumar los `resuelto` y elegir categorías. La app no muestra los `rechazado` en el mapa.
+- Cada pin indica el estado con su color y la categoría con su ícono. Los reclamos con **cinco o más confirmaciones** se destacan con un pin más grande, y el número de confirmaciones se ve sobre el pin.
+- Los pines muy cercanos se agrupan en una burbuja con la cantidad de reclamos, por ejemplo cuando muchos vecinos reportan el mismo corte de luz.
+- El botón "Mi ubicación" usa el GPS del celular con permiso del usuario. La ubicación no se envía al server: solo centra el mapa.
+
 ## Edición y eliminación de reclamos
 
 Crear y editar requieren no estar suspendido.

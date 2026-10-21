@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Para el botón "Mi ubicación" del mapa. La app pide el permiso la
+         primera vez que se toca el botón. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- allowBackup en false: flutter_secure_storage no puede descifrar el token
          si Android lo restaura desde una copia de seguridad en otro dispositivo. -->
