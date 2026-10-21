@@ -10,14 +10,10 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Seed the application's database, including development demo data.
      */
     public function run(): void
     {
-        $this->call([
-            EstadoReclamoSeeder::class,
-            TipoReclamoSeeder::class,
-            UsuarioDemoSeeder::class,
-        ]);
+        $this->call(DemoSeeder::class);
     }
 }

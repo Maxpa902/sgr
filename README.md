@@ -69,10 +69,10 @@ Cada vez que se agreguen migraciones nuevas, volvé a ejecutar `docker compose e
 
 ### Datos de prueba
 
-Para ver el mapa con reclamos, cargá los datos de demostración: cuentas de cada rol y 25 reclamos en barrios de Comodoro Rivadavia, Rada Tilly y Caleta Córdova.
+Para ver el mapa con reclamos, ejecutá el seeder principal para cargar estados, categorías y los datos de demostración: cuentas de cada rol y 25 reclamos en barrios de Comodoro Rivadavia, Rada Tilly y Caleta Córdova.
 
 ```bash
-docker compose exec app php artisan db:seed --class=DemoSeeder
+docker compose exec app php artisan db:seed
 ```
 
 | Cuenta | Rol | Contraseña |
@@ -81,7 +81,7 @@ docker compose exec app php artisan db:seed --class=DemoSeeder
 | `operario@sgr.test` | Operario | `password` |
 | `admin@sgr.test` | Admin | `password` |
 
-Además se crean `vecino1@sgr.test` a `vecino15@sgr.test`, que votan los reclamos. Si los datos ya estaban cargados, el comando no hace nada. Son solo para desarrollo: nunca ejecutar este seeder en una base real.
+Además se crean `vecino1@sgr.test` a `vecino15@sgr.test`, que votan los reclamos. Al volver a ejecutar el seeder, se restablecen los reclamos, el historial y los votos de demostración. Estos datos son para desarrollo; no ejecutes el seeder en una base real.
 
 Laravel estará disponible en:
 

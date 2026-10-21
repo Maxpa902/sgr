@@ -8,7 +8,9 @@ use App\Models\Reclamo;
 use App\Models\TipoReclamo;
 use App\Models\User;
 use App\Models\Voto;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -16,8 +18,8 @@ use Illuminate\Support\Collection;
  * Datos de demostración: una cuenta por rol, vecinos que votan y reclamos
  * repartidos por Comodoro Rivadavia, Rada Tilly y Caleta Córdova.
  *
- * No se ejecuta con DatabaseSeeder para que nunca llegue a una base real:
- * php artisan db:seed --class=DemoSeeder
+ * DatabaseSeeder lo ejecuta junto con los datos base; también puede correrse
+ * directamente con php artisan db:seed --class=DemoSeeder.
  */
 class DemoSeeder extends Seeder
 {
@@ -26,43 +28,49 @@ class DemoSeeder extends Seeder
      */
     public const PASSWORD = 'password';
 
+    use WithoutModelEvents;
+
     public function run(): void
     {
-        if (User::where('email', 'vecino@sgr.test')->exists()) {
-            $this->command?->warn('Los datos de prueba ya estaban cargados.');
+        DB::transaction(function (): void {
+            $this->call([EstadoReclamoSeeder::class, TipoReclamoSeeder::class]);
 
-            return;
-        }
+            $operario = $this->crearCuentasPorRol();
+            $vecinos = User::whereIn('email', $this->emailsVecinos())->orderBy('email')->get();
+            $estados = EstadoReclamo::pluck('id', 'nombre');
+            $tipos = TipoReclamo::whereNotNull('icono')->pluck('id', 'icono');
 
-        $this->call([EstadoReclamoSeeder::class, TipoReclamoSeeder::class]);
+            foreach ($this->reclamos() as $indice => $datos) {
+                $creador = $vecinos[$indice % $vecinos->count()];
+                $creado = now()->subDays($datos['dias'])->subHours($indice % 7 + 1);
 
-        $operario = $this->crearCuentasPorRol();
-        $vecinos = User::where('rol', 'ciudadano')->orderBy('id')->get();
-        $estados = EstadoReclamo::pluck('id', 'nombre');
-        $tipos = TipoReclamo::whereNotNull('icono')->pluck('id', 'icono');
+                // Las coordenadas y la dirección identifican cada reclamo del set demo.
+                // withTrashed permite restaurarlo si se borró desde la aplicación.
+                $reclamo = Reclamo::withTrashed()->firstOrNew([
+                    'direccion' => $datos['lugar'],
+                    'latitud' => $datos['latitud'],
+                    'longitud' => $datos['longitud'],
+                ]);
+                $reclamo->fill([
+                    'usuario_id' => $creador->id,
+                    'tipo_reclamo_id' => $tipos[$datos['icono']],
+                    'estado_id' => $estados[$datos['estado']],
+                    'titulo' => $datos['titulo'],
+                    'descripcion' => $datos['descripcion'],
+                    'es_publico' => true,
+                ]);
+                $reclamo->deleted_at = null;
+                $reclamo->created_at = $creado;
+                $reclamo->updated_at = $creado;
+                $reclamo->save();
 
-        foreach ($this->reclamos() as $indice => $datos) {
-            $creador = $vecinos[$indice % $vecinos->count()];
-            $creado = now()->subDays($datos['dias'])->subHours($indice % 7 + 1);
-
-            $reclamo = new Reclamo([
-                'usuario_id' => $creador->id,
-                'tipo_reclamo_id' => $tipos[$datos['icono']],
-                'estado_id' => $estados[$datos['estado']],
-                'titulo' => $datos['titulo'],
-                'descripcion' => $datos['descripcion'],
-                'latitud' => $datos['latitud'],
-                'longitud' => $datos['longitud'],
-                'direccion' => $datos['lugar'],
-                'es_publico' => true,
-            ]);
-            $reclamo->created_at = $creado;
-            $reclamo->updated_at = $creado;
-            $reclamo->save();
-
-            $this->registrarHistorial($reclamo, $creador, $operario, $estados, $creado);
-            $this->votar($reclamo, $creador, $vecinos, $datos['confirman'], $datos['desmienten']);
-        }
+                // Restablece lo que genera el seeder sin duplicar historial ni votos.
+                Voto::where('reclamo_id', $reclamo->id)->delete();
+                HistorialEstadoReclamo::where('reclamo_id', $reclamo->id)->delete();
+                $this->registrarHistorial($reclamo, $creador, $operario, $estados, $creado);
+                $this->votar($reclamo, $creador, $vecinos, $datos['confirman'], $datos['desmienten']);
+            }
+        });
     }
 
     /**
@@ -71,41 +79,50 @@ class DemoSeeder extends Seeder
      */
     private function crearCuentasPorRol(): User
     {
-        User::factory()->create([
+        User::updateOrCreate(['email' => 'vecino@sgr.test'], [
             'nombre' => 'Valeria',
             'apellido' => 'Gómez',
-            'email' => 'vecino@sgr.test',
             'dni' => '30111222',
             'password' => self::PASSWORD,
+            'rol' => 'ciudadano',
+            'activo' => true,
         ]);
 
-        $operario = User::factory()->create([
+        $operario = User::updateOrCreate(['email' => 'operario@sgr.test'], [
             'nombre' => 'Martín',
             'apellido' => 'Sosa',
-            'email' => 'operario@sgr.test',
             'dni' => '28444555',
             'rol' => 'empleado',
             'password' => self::PASSWORD,
+            'activo' => true,
         ]);
 
-        User::factory()->create([
+        User::updateOrCreate(['email' => 'admin@sgr.test'], [
             'nombre' => 'Admin',
             'apellido' => 'SGR',
-            'email' => 'admin@sgr.test',
             'rol' => 'admin',
             'password' => self::PASSWORD,
+            'activo' => true,
         ]);
 
-        User::factory()
-            ->count(15)
-            ->sequence(fn ($secuencia) => [
-                'email' => 'vecino'.($secuencia->index + 1).'@sgr.test',
-                'dni' => (string) (35000001 + $secuencia->index),
+        foreach (range(1, 15) as $numero) {
+            User::updateOrCreate(['email' => "vecino{$numero}@sgr.test"], [
+                'nombre' => "Vecino {$numero}",
+                'apellido' => 'Demo',
+                'dni' => (string) (35000000 + $numero),
+                'rol' => 'ciudadano',
                 'password' => self::PASSWORD,
-            ])
-            ->create();
+                'activo' => true,
+            ]);
+        }
 
         return $operario;
+    }
+
+    /** @return list<string> */
+    private function emailsVecinos(): array
+    {
+        return ['vecino@sgr.test', ...array_map(fn (int $numero) => "vecino{$numero}@sgr.test", range(1, 15))];
     }
 
     /**
