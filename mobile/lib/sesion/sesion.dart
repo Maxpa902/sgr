@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
+import '../modelos/reclamo_mapa.dart';
 import '../modelos/usuario.dart';
 import 'almacen_token.dart';
 
@@ -44,6 +46,28 @@ class Sesion extends ChangeNotifier {
 
   /// Consulta el directorio de cuentas del sistema (el server exige rol admin).
   Future<List<Usuario>> listarUsuarios() => _api.listarUsuarios();
+
+  /// Obtiene la lista de reclamos creados por el usuario actual.
+  Future<List<ReclamoMapa>> misReclamos() => _api.misReclamos();
+
+  /// Crea un reclamo enviando los datos al servidor.
+  Future<ReclamoMapa> crearReclamo({
+    required String titulo,
+    required String descripcion,
+    required int tipoId,
+    required double latitud,
+    required double longitud,
+    File? imagen,
+  }) {
+    return _api.crearReclamo(
+      titulo: titulo,
+      descripcion: descripcion,
+      tipoId: tipoId,
+      latitud: latitud,
+      longitud: longitud,
+      imagen: imagen,
+    );
+  }
 
   /// Al abrir la app: si hay un token guardado, le pregunta al server si
   /// todavía sirve.

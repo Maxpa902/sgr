@@ -16,19 +16,21 @@ class ReclamoMapa {
   });
 
   factory ReclamoMapa.fromJson(Map<String, dynamic> json) {
-    return ReclamoMapa(
-      id: json['id'] as int,
-      titulo: json['titulo'] as String,
-      latitud: (json['latitud'] as num).toDouble(),
-      longitud: (json['longitud'] as num).toDouble(),
-      direccion: json['direccion'] as String?,
-      tipo: TipoReclamo.fromJson(json['tipo'] as Map<String, dynamic>),
-      estado: json['estado'] as String,
-      confirmaciones: json['confirmaciones'] as int,
-      desmentidas: json['desmentidas'] as int,
-      creadoEn: DateTime.parse(json['created_at'] as String).toLocal(),
-    );
-  }
+  return ReclamoMapa(
+    id: json['id'] as int,
+    titulo: json['titulo'] as String,
+    latitud: double.parse(json['latitud'].toString()),
+    longitud: double.parse(json['longitud'].toString()),
+    estado: json['estado'] as String? ?? 'pendiente',
+    confirmaciones: int.tryParse(json['confirmaciones']?.toString() ?? '0') ?? 0,
+    desmentidas: int.tryParse(json['desmentidas']?.toString() ?? '0') ?? 0,
+    creadoEn: DateTime.parse(
+      (json['creado_en'] ?? json['created_at']) as String,
+    ),
+    tipo: TipoReclamo.fromJson(json['tipo'] as Map<String, dynamic>),
+    direccion: json['direccion'] as String?,
+  );
+}
 
   /// A partir de cuántas confirmaciones un reclamo se destaca en el mapa.
   static const destacadoDesde = 5;
