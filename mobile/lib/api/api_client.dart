@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/tipo_reclamo.dart';
@@ -30,6 +32,7 @@ class ApiClient {
   String? token;
 
   static const _tiempoMaximo = Duration(seconds: 10);
+  Future<void> _escriturasDelLog = Future<void>.value();
 
   Future<SesionIniciada> iniciarSesion({
     required String email,
@@ -156,6 +159,8 @@ class ApiClient {
 
     final response = await _procesar(
       http.Response.fromStream(await request.send()),
+      metodo: request.method,
+      uri: uri,
     );
 
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
@@ -186,8 +191,11 @@ class ApiClient {
     String ruta, {
     Map<String, Object>? parametros,
   }) {
+    final uri = _uri(ruta, parametros);
     return _procesar(
-      _http.get(_uri(ruta, parametros), headers: _encabezados()),
+      _http.get(uri, headers: _encabezados()),
+      metodo: 'GET',
+      uri: uri,
     );
   }
 
@@ -195,12 +203,15 @@ class ApiClient {
     String ruta, [
     Map<String, Object?>? cuerpo,
   ]) {
+    final uri = _uri(ruta);
     return _procesar(
       _http.post(
-        _uri(ruta),
+        uri,
         headers: _encabezados(conCuerpo: cuerpo != null),
         body: cuerpo == null ? null : jsonEncode(cuerpo),
       ),
+      metodo: 'POST',
+      uri: uri,
     );
   }
 
@@ -220,21 +231,57 @@ class ApiClient {
   }
 
   /// Espera la respuesta y devuelve su JSON, o lanza [ApiException].
-  Future<Map<String, dynamic>> _procesar(Future<http.Response> pedido) async {
+  Future<Map<String, dynamic>> _procesar(
+    Future<http.Response> pedido, {
+    required String metodo,
+    required Uri uri,
+  }) async {
+    final cronometro = Stopwatch()..start();
     final http.Response respuesta;
     try {
       respuesta = await pedido.timeout(_tiempoMaximo);
     } on TimeoutException {
+      _registrarTiempo(metodo, uri, cronometro, resultado: 'timeout');
       throw const ApiException.sinConexion();
     } on http.ClientException {
+      _registrarTiempo(metodo, uri, cronometro, resultado: 'sin conexión');
       throw const ApiException.sinConexion();
     }
 
+    _registrarTiempo(
+      metodo,
+      uri,
+      cronometro,
+      resultado: '${respuesta.statusCode}',
+    );
     final json = _decodificar(respuesta);
     if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) {
       return json;
     }
     throw _errorDesde(respuesta.statusCode, json);
+  }
+
+  void _registrarTiempo(
+    String metodo,
+    Uri uri,
+    Stopwatch cronometro, {
+    required String resultado,
+  }) {
+    cronometro.stop();
+    // Evita incluir parámetros que podrían contener datos sensibles.
+    final linea = '${DateTime.now().toIso8601String()} '
+        '$metodo ${uri.path} - ${cronometro.elapsedMilliseconds} ms '
+        '(resultado: $resultado)\n';
+    _escriturasDelLog = _escriturasDelLog.then((_) async {
+      try {
+        final directorio = await getApplicationDocumentsDirectory();
+        final archivo = File('${directorio.path}/api_requests.log');
+        await archivo.writeAsString(linea, mode: FileMode.append, flush: true);
+        debugPrint('[API] $linea');
+      } on Object catch (error) {
+        debugPrint('[API] No se pudo guardar api_requests.log: $error');
+      }
+    });
   }
 
   Map<String, dynamic> _decodificar(http.Response respuesta) {

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../formato.dart';
@@ -51,7 +52,6 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
   void initState() {
     super.initState();
     _cargarTipos();
-    _obtenerUbicacionActual();
   }
 
   @override
@@ -97,6 +97,20 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
       if (mounted) _mostrarSnackBar(e.mensaje);
     } finally {
       if (mounted) setState(() => _obteniendoUbicacion = false);
+    }
+  }
+
+  Future<void> _seleccionarPuntoEnMapa() async {
+    final punto = await showDialog<LatLng>(
+      context: context,
+      useSafeArea: false,
+      builder: (context) => _SelectorPuntoMapa(
+        puntoInicial: _ubicacion,
+      ),
+    );
+
+    if (punto != null && mounted) {
+      setState(() => _ubicacion = punto);
     }
   }
 
@@ -418,36 +432,64 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                       const SizedBox(height: 20),
                       Card(
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Icon(Icons.location_on_outlined),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   Expanded(
-                                    child: Text(
-                                      _ubicacion == null
-                                          ? 'Ubicación no seleccionada'
-                                          : 'Lat: ${_ubicacion!.latitude.toStringAsFixed(5)}, Lon: ${_ubicacion!.longitude.toStringAsFixed(5)}',
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _ubicacion == null
+                                              ? 'Elegí dónde ocurre el problema'
+                                              : 'Punto seleccionado',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _ubicacion == null
+                                              ? 'Podés marcarlo en el mapa sin compartir tu ubicación.'
+                                              : 'Lat. ${_ubicacion!.latitude.toStringAsFixed(5)} · Lon. ${_ubicacion!.longitude.toStringAsFixed(5)}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.my_location),
-                                    onPressed: (_obteniendoUbicacion || _enviando)
-                                        ? null
-                                        : _obtenerUbicacionActual,
                                   ),
                                 ],
                               ),
-                              if (_obteniendoUbicacion)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4),
-                                  child: LinearProgressIndicator(),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: _enviando
+                                    ? null
+                                    : _seleccionarPuntoEnMapa,
+                                icon: const Icon(Icons.map_outlined),
+                                label: Text(
+                                  _ubicacion == null
+                                      ? 'Elegir punto en el mapa'
+                                      : 'Mover punto en el mapa',
                                 ),
+                              ),
+                              TextButton.icon(
+                                onPressed:
+                                    (_obteniendoUbicacion || _enviando)
+                                        ? null
+                                        : _obtenerUbicacionActual,
+                                icon: const Icon(Icons.my_location),
+                                label: const Text('Usar mi ubicación actual'),
+                              ),
+                              if (_obteniendoUbicacion)
+                                const LinearProgressIndicator(),
                             ],
                           ),
                         ),
@@ -520,6 +562,123 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _SelectorPuntoMapa extends StatefulWidget {
+  const _SelectorPuntoMapa({this.puntoInicial});
+
+  final LatLng? puntoInicial;
+
+  @override
+  State<_SelectorPuntoMapa> createState() => _SelectorPuntoMapaState();
+}
+
+class _SelectorPuntoMapaState extends State<_SelectorPuntoMapa> {
+  late LatLng _centro = widget.puntoInicial ?? ZonaDelMapa.centroInicial;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      child: StatefulBuilder(
+        builder: (context, actualizarDialogo) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Elegir ubicación'),
+            leading: IconButton(
+              tooltip: 'Cancelar',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close),
+            ),
+          ),
+          body: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: const Text(
+                  'Mové el mapa hasta que el pin quede sobre el lugar del problema.',
+                ),
+              ),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    FlutterMap(
+                      options: MapOptions(
+                        initialCenter: _centro,
+                        initialZoom: ZonaDelMapa.zoomInicial,
+                        minZoom: ZonaDelMapa.zoomMinimo,
+                        maxZoom: ZonaDelMapa.zoomMaximo,
+                        cameraConstraint: CameraConstraint.contain(
+                          bounds: ZonaDelMapa.limites,
+                        ),
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all &
+                              ~InteractiveFlag.rotate,
+                        ),
+                        onPositionChanged: (camera, hasGesture) {
+                          if (hasGesture) {
+                            actualizarDialogo(() => _centro = camera.center);
+                          }
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'ar.sgr.reclamos',
+                        ),
+                        const SimpleAttributionWidget(
+                          source: Text('© OpenStreetMap'),
+                          alignment: Alignment.bottomLeft,
+                        ),
+                      ],
+                    ),
+                    IgnorePointer(
+                      child: Transform.translate(
+                        offset: const Offset(0, -20),
+                        child: Icon(
+                          Icons.location_pin,
+                          size: 44,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${_centro.latitude.toStringAsFixed(5)}, '
+                          '${_centro.longitude.toStringAsFixed(5)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.of(context).pop(_centro),
+                        icon: const Icon(Icons.check),
+                        label: const Text('Confirmar punto'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
