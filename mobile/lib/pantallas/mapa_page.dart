@@ -14,8 +14,63 @@ import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
 import '../widgets/mensaje_error.dart';
+import 'crear_reclamo_page.dart';
+import 'mis_reclamos_page.dart';
 
-/// Pantalla principal: el mapa de la ciudad con los reclamos.
+/// Contenedor principal con NavigationBar inferior.
+class PantallaPrincipal extends StatefulWidget {
+  const PantallaPrincipal({
+    super.key,
+    required this.sesion,
+    this.mostrarMapaBase = true,
+  });
+
+  final Sesion sesion;
+  final bool mostrarMapaBase;
+
+  @override
+  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
+}
+
+class _PantallaPrincipalState extends State<PantallaPrincipal> {
+  int _indiceActual = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _indiceActual,
+        children: [
+          MapaPage(
+            sesion: widget.sesion,
+            mostrarMapaBase: widget.mostrarMapaBase,
+          ),
+          MisReclamosPage(sesion: widget.sesion),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _indiceActual,
+        onDestinationSelected: (int index) {
+          setState(() => _indiceActual = index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Mapa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment),
+            label: 'Mis Reclamos',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pantalla del mapa con los reclamos.
 class MapaPage extends StatefulWidget {
   const MapaPage({
     super.key,
@@ -26,9 +81,6 @@ class MapaPage extends StatefulWidget {
 
   final Sesion sesion;
   final ServicioUbicacion ubicacion;
-
-  /// Las imágenes de calles se descargan de OpenStreetMap. Los tests las
-  /// apagan para no depender de internet.
   final bool mostrarMapaBase;
 
   @override
@@ -41,16 +93,12 @@ class _MapaPageState extends State<MapaPage> {
   List<TipoReclamo> _tipos = [];
   List<ReclamoMapa> _reclamos = [];
   Set<String> _estados = {...estadosPorDefecto};
-
-  /// Categorías elegidas en los filtros; `null` significa todas.
   Set<int>? _tiposElegidos;
 
   bool _cargando = false;
   String? _error;
   LatLng? _miUbicacion;
   bool _buscandoUbicacion = false;
-
-  /// Si se cambian los filtros rápido, solo vale la respuesta del último pedido.
   int _ultimoPedido = 0;
 
   @override
@@ -69,11 +117,9 @@ class _MapaPageState extends State<MapaPage> {
   Future<void> _cargarTipos() async {
     try {
       final tipos = await widget.sesion.api.tiposDeReclamo();
-      if (mounted) {
-        setState(() => _tipos = tipos);
-      }
+      if (mounted) setState(() => _tipos = tipos);
     } on ApiException {
-      // Sin categorías no se puede filtrar por categoría, pero el mapa funciona.
+      // Manejo silencioso en el mapa.
     }
   }
 
@@ -94,7 +140,6 @@ class _MapaPageState extends State<MapaPage> {
       }
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
-        // El token ya no sirve: la app vuelve sola al login.
         await widget.sesion.cerrarSesion();
         return;
       }
@@ -110,27 +155,16 @@ class _MapaPageState extends State<MapaPage> {
 
   void _cambiarEstado(String estado) {
     final estados = {..._estados};
-    if (!estados.remove(estado)) {
-      estados.add(estado);
-    }
-    // Siempre queda al menos un estado elegido.
-    if (estados.isEmpty) {
-      return;
-    }
+    if (!estados.remove(estado)) estados.add(estado);
+    if (estados.isEmpty) return;
     setState(() => _estados = estados);
     _cargarReclamos();
   }
 
   void _cambiarTipo(int tipo) {
-    // Si estaban todas elegidas, se parte de la lista completa.
-    final elegidos = {...(_tiposElegidos ?? _tipos.map((tipo) => tipo.id))};
-    if (!elegidos.remove(tipo)) {
-      elegidos.add(tipo);
-    }
-    // Siempre queda al menos una categoría elegida.
-    if (elegidos.isEmpty) {
-      return;
-    }
+    final elegidos = {...(_tiposElegidos ?? _tipos.map((t) => t.id))};
+    if (!elegidos.remove(tipo)) elegidos.add(tipo);
+    if (elegidos.isEmpty) return;
     setState(() {
       _tiposElegidos = elegidos.length == _tipos.length ? null : elegidos;
     });
@@ -141,7 +175,6 @@ class _MapaPageState extends State<MapaPage> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // El panel toma la altura que necesita, aunque sea más de la mitad.
       isScrollControlled: true,
       builder: (_) => ResumenReclamo(reclamo: reclamo),
     );
@@ -151,9 +184,7 @@ class _MapaPageState extends State<MapaPage> {
     setState(() => _buscandoUbicacion = true);
     try {
       final punto = await widget.ubicacion.ubicacionActual();
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       if (!ZonaDelMapa.limites.contains(punto)) {
         _avisar(
           'Tu ubicación está fuera de la zona del mapa (${ZonaDelMapa.nombre}).',
@@ -165,16 +196,12 @@ class _MapaPageState extends State<MapaPage> {
     } on UbicacionException catch (error) {
       _avisar(error.mensaje);
     } finally {
-      if (mounted) {
-        setState(() => _buscandoUbicacion = false);
-      }
+      if (mounted) setState(() => _buscandoUbicacion = false);
     }
   }
 
   void _avisar(String mensaje) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(mensaje)));
@@ -249,15 +276,37 @@ class _MapaPageState extends State<MapaPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _buscandoUbicacion ? null : _irAMiUbicacion,
-        tooltip: 'Mi ubicación',
-        child: _buscandoUbicacion
-            ? const SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              )
-            : const Icon(Icons.my_location),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'crear_reclamo',
+            onPressed: () async {
+              final creado = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => CrearReclamoPage(sesion: widget.sesion),
+                ),
+              );
+              if (creado == true) {
+                _cargarReclamos();
+              }
+            },
+            tooltip: 'Crear Reclamo',
+            child: const Icon(Icons.add),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.small(
+            heroTag: 'mi_ubicacion',
+            onPressed: _buscandoUbicacion ? null : _irAMiUbicacion,
+            tooltip: 'Mi ubicación',
+            child: _buscandoUbicacion
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.my_location),
+          ),
+        ],
       ),
     );
   }
@@ -271,7 +320,6 @@ class _MapaPageState extends State<MapaPage> {
         minZoom: ZonaDelMapa.zoomMinimo,
         maxZoom: ZonaDelMapa.zoomMaximo,
         cameraConstraint: CameraConstraint.contain(bounds: ZonaDelMapa.limites),
-        // Se puede mover y hacer zoom, pero no girar: el norte siempre arriba.
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
@@ -297,7 +345,6 @@ class _MapaPageState extends State<MapaPage> {
                   ),
                 ),
             ],
-            // Cada pin maneja su propio toque para abrir el resumen.
             markerChildBehavior: true,
             maxClusterRadius: 45,
             size: const Size(46, 46),
@@ -327,7 +374,6 @@ class _MapaPageState extends State<MapaPage> {
   }
 }
 
-/// Menú de la cuenta, arriba a la derecha: quién está logueado y cerrar sesión.
 class _MenuDeCuenta extends StatelessWidget {
   const _MenuDeCuenta({required this.sesion});
 

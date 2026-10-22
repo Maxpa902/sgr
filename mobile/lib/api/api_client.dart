@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -114,6 +115,46 @@ class ApiClient {
       for (final reclamo in json['data'] as List)
         ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
     ];
+  }
+
+  /// Devuelve los reclamos creados por el usuario autenticado.
+  Future<List<ReclamoMapa>> misReclamos() async {
+    final json = await _get('/api/reclamos', parametros: {'mis_reclamos': '1'});
+    return [
+      for (final reclamo in json['data'] as List)
+        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
+    ];
+  }
+
+  /// Envía un nuevo reclamo al servidor.
+  Future<ReclamoMapa> crearReclamo({
+    required String titulo,
+    required String descripcion,
+    required int tipoId,
+    required double latitud,
+    required double longitud,
+    File? imagen,
+  }) async {
+    final uri = _uri('/api/reclamos');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_encabezados())
+      ..fields['titulo'] = titulo
+      ..fields['descripcion'] = descripcion
+      ..fields['tipo_reclamo_id'] = '$tipoId'
+      ..fields['latitud'] = '$latitud'
+      ..fields['longitud'] = '$longitud';
+
+    if (imagen != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('foto', imagen.path),
+      );
+    }
+
+    final response = await _procesar(
+      http.Response.fromStream(await request.send()),
+    );
+
+    return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
   }
 
   SesionIniciada _sesionDesde(Map<String, dynamic> json) {

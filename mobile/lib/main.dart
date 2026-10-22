@@ -62,6 +62,6 @@ class SgrApp extends StatelessWidget {
       return PanelInternoPage(sesion: sesion);
     }
 
-    return MapaPage(sesion: sesion, mostrarMapaBase: mostrarMapaBase);
+    return PantallaPrincipal(sesion: sesion, mostrarMapaBase: mostrarMapaBase);
   }
 }

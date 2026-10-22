@@ -13,22 +13,20 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class ReclamoMapaResource extends JsonResource
 {
-    /**
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
             'titulo' => $this->titulo_visible,
+            'descripcion' => $this->descripcion,
             'latitud' => (float) $this->latitud,
             'longitud' => (float) $this->longitud,
             'direccion' => $this->direccion,
             'tipo' => new TipoReclamoResource($this->whenLoaded('tipoReclamo')),
-            'estado' => $this->estado->nombre,
-            'confirmaciones' => $this->confirmaciones_count,
-            'desmentidas' => $this->desmentidas_count,
-            'created_at' => $this->created_at,
+            'estado' => $this->estado ? $this->estado->nombre : 'pendiente',
+            'confirmaciones' => $this->confirmaciones_count ?? 0,
+            'desmentidas' => $this->desmentidas_count ?? 0,
+            'creado_en' => $this->created_at->toIso8601String(),
         ];
     }
 }
