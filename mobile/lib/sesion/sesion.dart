@@ -50,7 +50,6 @@ class Sesion extends ChangeNotifier {
   /// Obtiene la lista de reclamos creados por el usuario actual o en los que votó.
   Future<List<ReclamoMapa>> misReclamos() => _api.misReclamos();
 
-  /// Crea un reclamo enviando los datos al servidor.
   Future<ReclamoMapa> crearReclamo({
     required String titulo,
     required String descripcion,
@@ -58,6 +57,7 @@ class Sesion extends ChangeNotifier {
     required double latitud,
     required double longitud,
     File? imagen,
+    bool forzarCreacion = false,
   }) {
     return _api.crearReclamo(
       titulo: titulo,
@@ -66,6 +66,7 @@ class Sesion extends ChangeNotifier {
       latitud: latitud,
       longitud: longitud,
       imagen: imagen,
+      forzarCreacion: forzarCreacion,
     );
   }
 

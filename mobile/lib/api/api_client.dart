@@ -126,7 +126,6 @@ class ApiClient {
     ];
   }
 
-  /// Envía un nuevo reclamo al servidor.
   Future<ReclamoMapa> crearReclamo({
     required String titulo,
     required String descripcion,
@@ -134,6 +133,7 @@ class ApiClient {
     required double latitud,
     required double longitud,
     File? imagen,
+    bool forzarCreacion = false,
   }) async {
     final uri = _uri('/api/reclamos');
     final request = http.MultipartRequest('POST', uri)
@@ -143,6 +143,10 @@ class ApiClient {
       ..fields['tipo_reclamo_id'] = '$tipoId'
       ..fields['latitud'] = '$latitud'
       ..fields['longitud'] = '$longitud';
+
+    if (forzarCreacion) {
+      request.fields['forzar_creacion'] = '1';
+    }
 
     if (imagen != null) {
       request.files.add(
@@ -157,15 +161,14 @@ class ApiClient {
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
   }
 
-  /// Obtiene la lista de vecinos que votaron en un reclamo específico.
+ 
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {
-    final json = await _get('/api/reclamos/$reclamoId/votos'); //[cite: 2]
+    final json = await _get('/api/reclamos/$reclamoId/votos'); 
     final data = json['data'];
     if (data is! List) return [];
     return data.cast<Map<String, dynamic>>();
   }
 
-  /// Envía un voto (confirma/desmiente) para un reclamo específico.
   Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) async {
     return await _post('/api/reclamos/$reclamoId/votar', {
       'valor': valor,
@@ -249,6 +252,13 @@ class ApiClient {
   ApiException _errorDesde(int statusCode, Map<String, dynamic> json) {
     final mensajeDelServer = json['message'];
 
+    ReclamoMapa? duplicado;
+    if (json['reclamo_duplicado'] is Map<String, dynamic>) {
+      duplicado = ReclamoMapa.fromJson(
+        json['reclamo_duplicado'] as Map<String, dynamic>,
+      );
+    }
+
     return switch (statusCode) {
       401 => ApiException(
         'Tu sesión venció. Iniciá sesión de nuevo.',
@@ -260,8 +270,17 @@ class ApiClient {
             : 'No tenés permiso para hacer esto.',
         statusCode: statusCode,
       ),
+      409 => ApiException(
+        mensajeDelServer is String
+            ? mensajeDelServer
+            : 'Ya existe un reclamo activo cerca de esta ubicación.',
+        statusCode: statusCode,
+        reclamoDuplicado: duplicado,
+      ),
       422 => ApiException(
-        'Revisá los datos marcados.',
+        mensajeDelServer is String
+            ? mensajeDelServer
+            : 'Revisá los datos marcados.',
         statusCode: statusCode,
         errores: _primerErrorPorCampo(json['errors']),
       ),

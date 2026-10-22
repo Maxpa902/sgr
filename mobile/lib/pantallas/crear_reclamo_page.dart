@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import '../formato.dart';
 
 import '../api/api_exception.dart';
 import '../mapa/estilos.dart';
@@ -11,6 +12,8 @@ import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
 import '../validaciones.dart';
 import '../widgets/mensaje_error.dart';
+import '../mapa/resumen_reclamo.dart';
+import '../modelos/reclamo_mapa.dart';
 
 class CrearReclamoPage extends StatefulWidget {
   const CrearReclamoPage({
@@ -107,7 +110,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
     }
   }
 
-  Future<void> _guardarReclamo() async {
+  Future<void> _guardarReclamo({bool forzarCreacion = false}) async {
     if (_enviando) return;
 
     setState(() {
@@ -132,6 +135,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
         latitud: _ubicacion!.latitude,
         longitud: _ubicacion!.longitude,
         imagen: _imagen,
+        forzarCreacion: forzarCreacion,
       );
 
       if (mounted) {
@@ -157,7 +161,12 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
         }
       }
     } on ApiException catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (e.reclamoDuplicado != null) {
+        setState(() => _enviando = false);
+        _mostrarDialogoDuplicado(e.reclamoDuplicado!);
+      } else {
         setState(() {
           _error = e.mensaje;
           _erroresDelServer = e.errores;
@@ -172,6 +181,158 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
         });
       }
     }
+  }
+
+  void _mostrarDialogoDuplicado(ReclamoMapa duplicado) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '¿Es el mismo reclamo?',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Existe un reporte activo de la misma categoría a menos de 50 metros:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      duplicado.titulo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (duplicado.descripcion != null &&
+                        duplicado.descripcion!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        duplicado.descripcion!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey.shade800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                    if (duplicado.direccion != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              duplicado.direccion!,
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const Divider(height: 16, thickness: 0.8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cargado ${haceCuanto(duplicado.creadoEn)}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.thumb_up_alt_outlined,
+                              size: 14,
+                              color: Colors.green.shade800,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${duplicado.confirmaciones} confirmaciones',
+                              style: TextStyle(
+                                color: Colors.green.shade800,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _guardarReclamo(forzarCreacion: true);
+              },
+              child: const Text('No, es otro problema'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cierra diálogo
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (_) => ResumenReclamo(
+                    reclamo: duplicado,
+                    sesion: widget.sesion,
+                  ),
+                );
+              },
+              child: const Text('Ver reclamo existente'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _mostrarSnackBar(String msj) {

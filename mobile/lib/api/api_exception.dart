@@ -1,13 +1,21 @@
+import '../modelos/reclamo_mapa.dart';
+
 /// Error al hablar con el server, con un mensaje listo para mostrar al usuario.
 class ApiException implements Exception {
-  const ApiException(this.mensaje, {this.statusCode, this.errores = const {}});
+  const ApiException(
+    this.mensaje, {
+    this.statusCode,
+    this.errores = const {},
+    this.reclamoDuplicado,
+  });
 
   /// El server no respondió: está apagado, no hay internet o tardó demasiado.
   const ApiException.sinConexion()
-    : mensaje =
-          'No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.',
-      statusCode = null,
-      errores = const {};
+      : mensaje =
+            'No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.',
+        statusCode = null,
+        errores = const {},
+        reclamoDuplicado = null;
 
   final String mensaje;
 
@@ -15,8 +23,10 @@ class ApiException implements Exception {
   final int? statusCode;
 
   /// Primer error de cada campo, cuando el server rechaza los datos (422).
-  /// Por ejemplo: `{'dni': 'Ya existe una cuenta con ese DNI.'}`.
   final Map<String, String> errores;
+
+  /// Reclamo existente retornado en caso de conflicto por duplicación (409).
+  final ReclamoMapa? reclamoDuplicado;
 
   bool get sinConexion => statusCode == null;
 
