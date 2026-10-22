@@ -172,13 +172,17 @@ class _MapaPageState extends State<MapaPage> {
   }
 
   void _mostrarResumen(ReclamoMapa reclamo) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => ResumenReclamo(reclamo: reclamo),
-    );
-  }
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => ResumenReclamo(
+      reclamo: reclamo,
+      sesion: widget.sesion,
+      alVotar: _cargarReclamos, // O _reintentar según corresponda en MisReclamosPage
+    ),
+  );
+}
 
   Future<void> _irAMiUbicacion() async {
     setState(() => _buscandoUbicacion = true);

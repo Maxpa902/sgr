@@ -37,7 +37,11 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => ResumenReclamo(reclamo: reclamo),
+      builder: (_) => ResumenReclamo(
+        reclamo: reclamo,
+        sesion: widget.sesion,
+        alVotar: _reintentar,
+      ),
     );
   }
 

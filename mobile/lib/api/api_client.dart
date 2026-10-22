@@ -117,7 +117,7 @@ class ApiClient {
     ];
   }
 
-  /// Devuelve los reclamos creados por el usuario autenticado.
+  /// Devuelve los reclamos creados por el usuario autenticado o en los que participó.
   Future<List<ReclamoMapa>> misReclamos() async {
     final json = await _get('/api/reclamos', parametros: {'mis_reclamos': '1'});
     return [
@@ -155,6 +155,13 @@ class ApiClient {
     );
 
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  /// Envía un voto (confirma/desmiente) para un reclamo específico.
+  Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) async {
+    return await _post('/api/reclamos/$reclamoId/votar', {
+      'valor': valor,
+    });
   }
 
   SesionIniciada _sesionDesde(Map<String, dynamic> json) {

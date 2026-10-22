@@ -47,7 +47,7 @@ class Sesion extends ChangeNotifier {
   /// Consulta el directorio de cuentas del sistema (el server exige rol admin).
   Future<List<Usuario>> listarUsuarios() => _api.listarUsuarios();
 
-  /// Obtiene la lista de reclamos creados por el usuario actual.
+  /// Obtiene la lista de reclamos creados por el usuario actual o en los que votó.
   Future<List<ReclamoMapa>> misReclamos() => _api.misReclamos();
 
   /// Crea un reclamo enviando los datos al servidor.
@@ -67,6 +67,11 @@ class Sesion extends ChangeNotifier {
       longitud: longitud,
       imagen: imagen,
     );
+  }
+
+  /// Envía un voto (confirma/desmiente) para un reclamo.
+  Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) {
+    return _api.votarReclamo(reclamoId, valor);
   }
 
   /// Al abrir la app: si hay un token guardado, le pregunta al server si

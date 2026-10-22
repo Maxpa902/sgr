@@ -26,6 +26,9 @@ class ReclamoMapaResource extends JsonResource
             'estado' => $this->estado ? $this->estado->nombre : 'pendiente',
             'confirmaciones' => $this->confirmaciones_count ?? 0,
             'desmentidas' => $this->desmentidas_count ?? 0,
+            'fotos' => $this->whenLoaded('fotos', function () {
+            return $this->fotos->map(fn ($foto) => asset('storage/' . $foto->ruta));
+        }, []),
             'creado_en' => $this->created_at->toIso8601String(),
         ];
     }

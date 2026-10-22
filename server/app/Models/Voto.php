@@ -3,16 +3,21 @@
 namespace App\Models;
 
 use Database\Factories\VotoFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['reclamo_id', 'usuario_id', 'valor'])]
 class Voto extends Model
 {
-    /** @use HasFactory<VotoFactory> */
     use HasFactory;
+
+    protected $table = 'votos';
+
+    protected $fillable = [
+        'reclamo_id',
+        'usuario_id',
+        'valor',
+    ];
 
     public function reclamo(): BelongsTo
     {

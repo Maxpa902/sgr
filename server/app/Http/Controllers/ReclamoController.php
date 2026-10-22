@@ -19,26 +19,39 @@ class ReclamoController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $filtros = $request->validate([
+        $filtros =$request->validate([
             'estados' => ['sometimes', 'array'],
             'estados.*' => ['string', Rule::exists('estados_reclamo', 'nombre')],
             'tipos' => ['sometimes', 'array'],
             'tipos.*' => ['integer', Rule::exists('tipos_reclamo', 'id')],
+            'mis_reclamos' => ['sometimes', 'boolean'],
         ]);
 
-        $estados = $filtros['estados'] ?? EstadoReclamo::ACTIVOS;
+        $usuarioId =$request->user()?->id;
+        $query = Reclamo::query();
 
-        $reclamos = Reclamo::query()
-            ->publicos()
-            ->whereHas('estado', fn (Builder $query) => $query->whereIn('nombre', $estados))
+        if ($request->boolean('mis_reclamos')) {
+            // Muestra los reclamos creados por el usuario o en los que votó/participó
+            $query->where(function (Builder $q) use ($usuarioId) {
+                $q->where('usuario_id',$usuarioId)
+                  ->orWhereHas('votos', fn (Builder $vq) => $vq->where('usuario_id',$usuarioId));
+            });
+        } else {
+            // Muestra los reclamos públicos activos para el mapa general
+            $estados =$filtros['estados'] ?? EstadoReclamo::ACTIVOS;
+            $query->publicos()
+                ->whereHas('estado', fn (Builder $q) => $q->whereIn('nombre',$estados));
+        }
+
+        $reclamos =$query
             ->when(
                 isset($filtros['tipos']),
-                fn (Builder $query) => $query->whereIn('tipo_reclamo_id', $filtros['tipos']),
+                fn (Builder $q) => $q->whereIn('tipo_reclamo_id',$filtros['tipos']),
             )
-            ->with(['tipoReclamo', 'estado'])
+            ->with(['tipoReclamo', 'estado', 'fotos'])
             ->withCount([
-                'votos as confirmaciones_count' => fn (Builder $query) => $query->where('valor', 'confirma'),
-                'votos as desmentidas_count' => fn (Builder $query) => $query->where('valor', 'desmiente'),
+                'votos as confirmaciones_count' => fn (Builder $q) =>$q->where('valor', 'confirma'),
+                'votos as desmentidas_count' => fn (Builder $q) =>$q->where('valor', 'desmiente'),
             ])
             ->latest()
             ->get();
@@ -100,7 +113,7 @@ public function store(Request $request)
     }
 
     // Cargar relaciones necesarias para ReclamoMapaResource
-    $reclamo->load(['tipoReclamo', 'estado']);
+    $reclamo->load(['tipoReclamo', 'estado', 'fotos']);
     $reclamo->confirmaciones_count = 0;
     $reclamo->desmentidas_count = 0;
 
