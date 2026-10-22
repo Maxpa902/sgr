@@ -58,7 +58,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           setState(() {
             _indiceActual = index;
             if (index == 1) {
-              // Incrementa el contador para forzar la recarga al entrar a Mis Reclamos
               _contadorMisReclamos++;
             }
           });
@@ -106,6 +105,7 @@ class _MapaPageState extends State<MapaPage> {
   Set<int>? _tiposElegidos;
 
   bool _cargando = false;
+  bool _filtrosDesplegados = false; // Control del desplegable de filtros
   String? _error;
   LatLng? _miUbicacion;
   bool _buscandoUbicacion = false;
@@ -181,20 +181,40 @@ class _MapaPageState extends State<MapaPage> {
     _cargarReclamos();
   }
 
+  void _seleccionarTodosLosEstados() {
+    setState(() {
+      _estados = {...estadosDelMapa};
+    });
+    _cargarReclamos();
+  }
+
+  void _seleccionarTodasLasCategorias() {
+    setState(() {
+      _tiposElegidos = null;
+    });
+    _cargarReclamos();
+  }
+
   void _mostrarResumen(ReclamoMapa reclamo) {
-  showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => ResumenReclamo(
-      reclamo: reclamo,
-      sesion: widget.sesion,
-      alVotar: _cargarReclamos, // O _reintentar según corresponda en MisReclamosPage
-    ),
-  );
-}
+    if (_filtrosDesplegados) {
+      setState(() => _filtrosDesplegados = false);
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => ResumenReclamo(
+        reclamo: reclamo,
+        sesion: widget.sesion,
+        alVotar: _cargarReclamos,
+      ),
+    );
+  }
 
   Future<void> _irAMiUbicacion() async {
+    if (_filtrosDesplegados) {
+      setState(() => _filtrosDesplegados = false);
+    }
     setState(() => _buscandoUbicacion = true);
     try {
       final punto = await widget.ubicacion.ubicacionActual();
@@ -245,17 +265,20 @@ class _MapaPageState extends State<MapaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Material(
-                  elevation: 2,
-                  child: BarraFiltros(
-                    estados: _estados,
-                    tipos: _tipos,
-                    tiposElegidos: _tiposElegidos,
-                    alCambiarEstado: _cambiarEstado,
-                    alCambiarTipo: _cambiarTipo,
-                  ),
-                ),
                 if (_cargando) const LinearProgressIndicator(),
+                BarraFiltros(
+                  estados: _estados,
+                  tipos: _tipos,
+                  tiposElegidos: _tiposElegidos,
+                  desplegado: _filtrosDesplegados,
+                  alAlternarDesplegado: () {
+                    setState(() => _filtrosDesplegados = !_filtrosDesplegados);
+                  },
+                  alCambiarEstado: _cambiarEstado,
+                  alCambiarTipo: _cambiarTipo,
+                  alSeleccionarTodosLosEstados: _seleccionarTodosLosEstados,
+                  alSeleccionarTodasLasCategorias: _seleccionarTodasLasCategorias,
+                ),
                 if (_error case final error?)
                   Padding(
                     padding: const EdgeInsets.all(12),
@@ -296,6 +319,9 @@ class _MapaPageState extends State<MapaPage> {
           FloatingActionButton(
             heroTag: 'crear_reclamo',
             onPressed: () async {
+              if (_filtrosDesplegados) {
+                setState(() => _filtrosDesplegados = false);
+              }
               final creado = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(
                   builder: (_) => CrearReclamoPage(sesion: widget.sesion),
@@ -337,6 +363,12 @@ class _MapaPageState extends State<MapaPage> {
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
+        onTap: (_, __) {
+          // Oculta el panel de filtros si el usuario toca la superficie del mapa
+          if (_filtrosDesplegados) {
+            setState(() => _filtrosDesplegados = false);
+          }
+        },
       ),
       children: [
         if (widget.mostrarMapaBase)
