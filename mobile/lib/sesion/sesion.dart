@@ -69,6 +69,11 @@ class Sesion extends ChangeNotifier {
     );
   }
 
+  /// Obtiene la lista de vecinos que votaron en un reclamo.
+  Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) {
+    return _api.obtenerVotantes(reclamoId);
+  }
+
   /// Envía un voto (confirma/desmiente) para un reclamo.
   Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) {
     return _api.votarReclamo(reclamoId, valor);

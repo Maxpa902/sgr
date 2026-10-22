@@ -8,6 +8,24 @@ use Illuminate\Http\Request;
 
 class VotoController extends Controller
 {
+    public function index(Reclamo $reclamo)
+    {
+        $votos = Voto::where('reclamo_id', $reclamo->id)
+            ->with('usuario:id,nombre,apellido') 
+            ->get(['id', 'usuario_id', 'valor', 'created_at']);
+
+        return response()->json([
+            'data' => $votos->map(function ($voto) {
+                return [
+                    'id' => $voto->id,
+                    'usuario' => $voto->usuario ? trim("{$voto->usuario->nombre} {$voto->usuario->apellido}") : 'Usuario',
+                    'valor' => $voto->valor,
+                    'creado_en' => $voto->created_at->toIso8601String(),
+                ];
+            }),
+        ]);
+    }   
+
     public function store(Request $request, Reclamo $reclamo)
     {
         $validated = $request->validate([

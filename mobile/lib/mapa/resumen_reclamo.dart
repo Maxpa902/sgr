@@ -81,6 +81,94 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     }
   }
 
+  void _mostrarListaVotantes(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: widget.sesion.obtenerVotantes(widget.reclamo.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final votantes = snapshot.data ?? [];
+            if (votantes.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text(
+                  'Aún no hay votos registrados para este reclamo.',
+                  textAlign: TextAlign.center,
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Text(
+                      'Vecinos que votaron',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: votantes.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final voto = votantes[index];
+                        final esConfirma = voto['valor'] == 'confirma';
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: esConfirma
+                                ? Colors.green.shade100
+                                : Colors.red.shade100,
+                            child: Icon(
+                              esConfirma
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_down,
+                              color: esConfirma
+                                  ? Colors.green.shade700
+                                  : Colors.red.shade700,
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(voto['usuario'] as String? ?? 'Usuario'),
+                          subtitle: Text(
+                            esConfirma
+                                ? 'Confirmó el reclamo'
+                                : 'Desmintió el reclamo',
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final reclamo = widget.reclamo;
@@ -241,6 +329,16 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
                 ),
               ],
             ),
+            if (_confirmaciones > 0 || _desmentidas > 0) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _mostrarListaVotantes(context),
+                  icon: const Icon(Icons.people_alt_outlined, size: 18),
+                  label: const Text('Ver lista de votantes'),
+                ),
+              ),
+            ],
             if (_mensajeNotificacion != null) ...[
               const SizedBox(height: 12),
               Container(

@@ -157,6 +157,14 @@ class ApiClient {
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  /// Obtiene la lista de vecinos que votaron en un reclamo específico.
+  Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {
+    final json = await _get('/api/reclamos/$reclamoId/votos'); //[cite: 2]
+    final data = json['data'];
+    if (data is! List) return [];
+    return data.cast<Map<String, dynamic>>();
+  }
+
   /// Envía un voto (confirma/desmiente) para un reclamo específico.
   Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) async {
     return await _post('/api/reclamos/$reclamoId/votar', {
