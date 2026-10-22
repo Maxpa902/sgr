@@ -18,6 +18,11 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'sightengine' => [
+        'user' => env('SIGHTENGINE_USER'),
+        'secret' => env('SIGHTENGINE_SECRET'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
