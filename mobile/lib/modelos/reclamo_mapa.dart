@@ -1,6 +1,6 @@
 import 'tipo_reclamo.dart';
 
-/// Los datos de un reclamo que hacen falta para dibujar su pin en el mapa y mostrar su resumen.
+/// Los datos de un reclamo para el mapa y su detalle.
 class ReclamoMapa {
   const ReclamoMapa({
     required this.id,
@@ -12,13 +12,14 @@ class ReclamoMapa {
     required this.confirmaciones,
     required this.desmentidas,
     required this.creadoEn,
+    this.usuarioId,
+    this.miVoto,
     this.descripcion,
     this.direccion,
     this.fotos = const [],
   });
 
   factory ReclamoMapa.fromJson(Map<String, dynamic> json) {
-    // Extracción segura de la lista de fotos sin riesgo de devolver nulo
     final fotosJson = json['fotos'];
     final List<String> fotosLista = (fotosJson is List)
         ? fotosJson.map((e) => e.toString()).toList()
@@ -26,6 +27,8 @@ class ReclamoMapa {
 
     return ReclamoMapa(
       id: json['id'] as int,
+      usuarioId: json['usuario_id'] as int?,
+      miVoto: json['mi_voto'] as String?,
       titulo: json['titulo'] as String,
       descripcion: json['descripcion'] as String?,
       latitud: double.parse(json['latitud'].toString()),
@@ -43,10 +46,11 @@ class ReclamoMapa {
     );
   }
 
-  /// A partir de cuántas confirmaciones un reclamo se destaca en el mapa.
   static const destacadoDesde = 5;
 
   final int id;
+  final int? usuarioId;
+  final String? miVoto; // 'confirma', 'desmiente' o null
   final String titulo;
   final String? descripcion;
   final double latitud;

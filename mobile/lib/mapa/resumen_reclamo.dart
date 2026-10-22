@@ -27,6 +27,7 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
   late int _confirmaciones;
   late int _desmentidas;
   bool _votando = false;
+  String? _miVotoActual;
   String? _mensajeNotificacion;
 
   @override
@@ -34,9 +35,11 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     super.initState();
     _confirmaciones = widget.reclamo.confirmaciones;
     _desmentidas = widget.reclamo.desmentidas;
+    // Carga el voto previo traído desde el servidor
+    _miVotoActual = widget.reclamo.miVoto;
   }
 
-  void _mostrarMensaje(String mensaje, {bool esError = false}) {
+  void _mostrarMensaje(String mensaje) {
     if (!mounted) return;
     setState(() {
       _mensajeNotificacion = mensaje;
@@ -45,7 +48,10 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
 
   Future<void> _votar(String valor) async {
     if (_votando) return;
-    setState(() => _votando = true);
+    setState(() {
+      _votando = true;
+      _mensajeNotificacion = null;
+    });
 
     try {
       final res = await widget.sesion.votarReclamo(widget.reclamo.id, valor);
@@ -53,6 +59,13 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
         setState(() {
           _confirmaciones = res['confirmaciones'] as int;
           _desmentidas = res['desmentidas'] as int;
+
+          // Si volvió a presionar la misma opción se borró el voto, si no se cambió/guardó
+          if (_miVotoActual == valor) {
+            _miVotoActual = null;
+          } else {
+            _miVotoActual = valor;
+          }
         });
         _mostrarMensaje(
           res['message']?.toString() ?? 'Voto registrado correctamente',
@@ -60,9 +73,9 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
         widget.alVotar?.call();
       }
     } on ApiException catch (e) {
-      _mostrarMensaje(e.mensaje, esError: true);
+      _mostrarMensaje(e.mensaje);
     } catch (e) {
-      _mostrarMensaje('No se pudo registrar tu voto.', esError: true);
+      _mostrarMensaje('No se pudo registrar tu voto.');
     } finally {
       if (mounted) setState(() => _votando = false);
     }
@@ -76,6 +89,12 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     final lugar = reclamo.direccion == null
         ? reclamo.tipo.nombre
         : '${reclamo.tipo.nombre} · ${reclamo.direccion}';
+
+    final esMiReclamoCreado = widget.sesion.usuario?.id != null &&
+        widget.reclamo.usuarioId == widget.sesion.usuario?.id;
+
+    final estaConfirmado = _miVotoActual == 'confirma';
+    final estaDesmentido = _miVotoActual == 'desmiente';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -169,16 +188,54 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _votando ? null : () => _votar('confirma'),
-                    icon: const Icon(Icons.thumb_up_outlined),
+                    onPressed: (esMiReclamoCreado || _votando)
+                        ? null
+                        : () => _votar('confirma'),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: estaConfirmado
+                          ? Colors.green.shade600
+                          : Colors.transparent,
+                      foregroundColor:
+                          estaConfirmado ? Colors.white : Colors.green.shade700,
+                      side: BorderSide(
+                        color: esMiReclamoCreado
+                            ? Colors.grey.shade400
+                            : Colors.green.shade600,
+                        width: 1.5,
+                      ),
+                    ),
+                    icon: Icon(
+                      estaConfirmado
+                          ? Icons.thumb_up
+                          : Icons.thumb_up_outlined,
+                    ),
                     label: Text('Confirmar ($_confirmaciones)'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _votando ? null : () => _votar('desmiente'),
-                    icon: const Icon(Icons.thumb_down_outlined),
+                    onPressed: (esMiReclamoCreado || _votando)
+                        ? null
+                        : () => _votar('desmiente'),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: estaDesmentido
+                          ? Colors.red.shade600
+                          : Colors.transparent,
+                      foregroundColor:
+                          estaDesmentido ? Colors.white : Colors.red.shade700,
+                      side: BorderSide(
+                        color: esMiReclamoCreado
+                            ? Colors.grey.shade400
+                            : Colors.red.shade600,
+                        width: 1.5,
+                      ),
+                    ),
+                    icon: Icon(
+                      estaDesmentido
+                          ? Icons.thumb_down
+                          : Icons.thumb_down_outlined,
+                    ),
                     label: Text('Desmentir ($_desmentidas)'),
                   ),
                 ),

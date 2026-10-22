@@ -34,6 +34,7 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   int _indiceActual = 0;
+  int _contadorMisReclamos = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +46,22 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             sesion: widget.sesion,
             mostrarMapaBase: widget.mostrarMapaBase,
           ),
-          MisReclamosPage(sesion: widget.sesion),
+          MisReclamosPage(
+            key: ValueKey('mis-reclamos-$_contadorMisReclamos'),
+            sesion: widget.sesion,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _indiceActual,
         onDestinationSelected: (int index) {
-          setState(() => _indiceActual = index);
+          setState(() {
+            _indiceActual = index;
+            if (index == 1) {
+              // Incrementa el contador para forzar la recarga al entrar a Mis Reclamos
+              _contadorMisReclamos++;
+            }
+          });
         },
         destinations: const [
           NavigationDestination(
