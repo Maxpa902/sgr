@@ -30,6 +30,20 @@ flutter --version
 flutter doctor -v
 ```
 
+## Inicio rápido
+
+El servidor local usa Docker y queda publicado en el puerto `8081`. Una vez
+preparado, desde `mobile/` alcanza con:
+
+```bash
+flutter pub get
+flutter run
+```
+
+Sin argumentos extra, la app usa `localhost` en Chrome/escritorio y
+`10.0.2.2` en Android Emulator. Para un teléfono físico se mantiene la opción
+`--dart-define=SERVER_URL=http://IP_LOCAL_DE_LA_PC:8081`.
+
 ## 1. Levantar Laravel
 
 Desde la raíz del repositorio, prepará el entorno local:

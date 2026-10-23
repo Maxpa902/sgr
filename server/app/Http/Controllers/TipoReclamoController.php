@@ -17,4 +17,10 @@ class TipoReclamoController extends Controller
 
         return TipoReclamoResource::collection($tipos);
     }
+
+    /** Lista todas las categorías para filtrar el directorio de reclamos admin. */
+    public function adminIndex(): AnonymousResourceCollection
+    {
+        return TipoReclamoResource::collection(TipoReclamo::orderBy('nombre')->get());
+    }
 }

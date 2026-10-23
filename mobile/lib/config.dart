@@ -1,9 +1,18 @@
-/// Dirección del server Laravel.
+import 'package:flutter/foundation.dart';
+
+/// Dirección del servidor Laravel.
 ///
-/// Se puede cambiar al correr la app con `--dart-define=SERVER_URL=...`.
-/// El valor por defecto sirve para el emulador de Android, donde `10.0.2.2`
-/// es la computadora en la que corre Docker.
-const serverUrl = String.fromEnvironment(
-  'SERVER_URL',
-  defaultValue: 'http://10.0.2.2:8081',
-);
+/// Puede cambiarse con `--dart-define=SERVER_URL=...`. Sin configuración
+/// adicional funciona en Android Emulator, Chrome y las plataformas de
+/// escritorio ejecutadas en esta computadora.
+String get serverUrl {
+  const configuredUrl = String.fromEnvironment('SERVER_URL');
+
+  if (configuredUrl.isNotEmpty) {
+    return configuredUrl;
+  }
+
+  return defaultTargetPlatform == TargetPlatform.android
+      ? 'http://10.0.2.2:8081'
+      : 'http://localhost:8081';
+}

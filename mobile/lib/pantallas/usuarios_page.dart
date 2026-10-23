@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
 import '../modelos/usuario.dart';
@@ -14,114 +17,361 @@ class UsuariosPage extends StatefulWidget {
 }
 
 class _UsuariosPageState extends State<UsuariosPage> {
-  late Future<List<Usuario>> _usuarios;
+  final List<Usuario> _usuarios = [];
+  final _busqueda = TextEditingController();
+  final _scrollController = ScrollController();
+  String _filtroRol = 'todos';
+  String _filtroEstado = 'todos';
+  String? _cursor;
+  String? _errorInicial;
+  String? _errorMas;
+  int _total = 0;
+  int _versionConsulta = 0;
+  bool _cargandoInicial = true;
+  bool _cargandoMas = false;
+  bool _hayMas = true;
+  bool _actualizandoFiltros = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _cargar();
+    _scrollController.addListener(_alDesplazarse);
+    unawaited(_cargarPrimeraPagina(++_versionConsulta));
   }
 
-  void _cargar() {
-    _usuarios = widget.sesion.listarUsuarios();
+  void _alCambiarBusqueda(TextEditingValue valor) {
+    if (_actualizandoFiltros) {
+      return;
+    }
+    _debounce?.cancel();
+    final version = _prepararNuevaConsulta();
+    _debounce = Timer(
+      const Duration(milliseconds: 350),
+      () => unawaited(_cargarPrimeraPagina(version)),
+    );
   }
 
-  void _reintentar() {
-    setState(_cargar);
+  int _prepararNuevaConsulta() {
+    final version = ++_versionConsulta;
+    setState(() {
+      _usuarios.clear();
+      _cursor = null;
+      _total = 0;
+      _hayMas = true;
+      _cargandoInicial = true;
+      _cargandoMas = false;
+      _errorInicial = null;
+      _errorMas = null;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    return version;
+  }
+
+  Future<void> _recargar() async {
+    _debounce?.cancel();
+    await _cargarPrimeraPagina(_prepararNuevaConsulta());
+  }
+
+  Future<void> _cargarPrimeraPagina(int version) async {
+    try {
+      final pagina = await widget.sesion.listarUsuarios(
+        busqueda: _busqueda.text.trim(),
+        rol: _filtroRol == 'todos' ? null : _filtroRol,
+        estado: _filtroEstado == 'todos' ? null : _filtroEstado,
+      );
+      if (!mounted || version != _versionConsulta) {
+        return;
+      }
+      setState(() {
+        _usuarios
+          ..clear()
+          ..addAll(pagina.usuarios);
+        _total = pagina.total;
+        _cursor = pagina.proximoCursor;
+        _hayMas = _cursor != null;
+        _cargandoInicial = false;
+        _errorInicial = null;
+      });
+      _cargarMasSiHaceFalta();
+    } on Object catch (error) {
+      if (!mounted || version != _versionConsulta) {
+        return;
+      }
+      setState(() {
+        _cargandoInicial = false;
+        _errorInicial = error is ApiException
+            ? error.mensaje
+            : 'No se pudieron cargar las cuentas.';
+      });
+    }
+  }
+
+  void _alDesplazarse() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.extentAfter < 420) {
+      unawaited(_cargarMas());
+    }
+  }
+
+  void _cargarMasSiHaceFalta() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _scrollController.hasClients &&
+          _scrollController.position.extentAfter < 420) {
+        unawaited(_cargarMas());
+      }
+    });
+  }
+
+  Future<void> _cargarMas() async {
+    final cursor = _cursor;
+    if (!_hayMas ||
+        cursor == null ||
+        _cargandoInicial ||
+        _cargandoMas ||
+        _errorMas != null) {
+      return;
+    }
+
+    final version = _versionConsulta;
+    setState(() => _cargandoMas = true);
+    try {
+      final pagina = await widget.sesion.listarUsuarios(
+        busqueda: _busqueda.text.trim(),
+        rol: _filtroRol == 'todos' ? null : _filtroRol,
+        estado: _filtroEstado == 'todos' ? null : _filtroEstado,
+        cursor: cursor,
+      );
+      if (!mounted || version != _versionConsulta) {
+        return;
+      }
+      setState(() {
+        _usuarios.addAll(pagina.usuarios);
+        _total = pagina.total;
+        _cursor = pagina.proximoCursor;
+        _hayMas = _cursor != null;
+        _cargandoMas = false;
+        _errorMas = null;
+      });
+      _cargarMasSiHaceFalta();
+    } on Object catch (error) {
+      if (!mounted || version != _versionConsulta) {
+        return;
+      }
+      setState(() {
+        _cargandoMas = false;
+        _errorMas = error is ApiException
+            ? error.mensaje
+            : 'No se pudieron cargar más cuentas.';
+      });
+    }
+  }
+
+  void _cambiarRol(String? valor) {
+    setState(() => _filtroRol = valor ?? 'todos');
+    unawaited(_recargar());
+  }
+
+  void _cambiarEstado(String? valor) {
+    setState(() => _filtroEstado = valor ?? 'todos');
+    unawaited(_recargar());
+  }
+
+  void _limpiarFiltros() {
+    _actualizandoFiltros = true;
+    _busqueda.clear();
+    _filtroRol = 'todos';
+    _filtroEstado = 'todos';
+    _actualizandoFiltros = false;
+    unawaited(_recargar());
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _scrollController
+      ..removeListener(_alDesplazarse)
+      ..dispose();
+    _busqueda.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Cuentas')),
-      body: SafeArea(
-        child: FutureBuilder<List<Usuario>>(
-          future: _usuarios,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError) {
-              final error = snapshot.error;
-              final mensaje = error is ApiException
-                  ? error.mensaje
-                  : 'No se pudieron cargar las cuentas.';
-              return _EstadoDirectorio(
-                icono: Icons.cloud_off_outlined,
-                titulo: 'No se pudo cargar',
-                detalle: mensaje,
-                accion: FilledButton.icon(
-                  onPressed: _reintentar,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              );
-            }
-
-            final usuarios = snapshot.data ?? const <Usuario>[];
-            if (usuarios.isEmpty) {
-              return _EstadoDirectorio(
-                icono: Icons.people_outline,
-                titulo: 'Todavía no hay cuentas',
-                detalle: 'Cuando se registren usuarios, aparecerán acá.',
-                accion: OutlinedButton.icon(
-                  onPressed: _reintentar,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Actualizar'),
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                _reintentar();
-                try {
-                  await _usuarios;
-                } on Object {
-                  // El FutureBuilder muestra el error y deja disponible reintentar.
-                }
-              },
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                itemCount: usuarios.length + 1,
-                separatorBuilder: (_, index) => index == 0
-                    ? const SizedBox(height: 12)
-                    : const Divider(height: 1, indent: 68),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Usuarios',
-                              style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+    return FScaffold(
+      childPad: false,
+      header: FHeader.nested(
+        title: const Text('Cuentas'),
+        prefixes: [
+          FHeaderAction.back(onPress: () => Navigator.of(context).pop()),
+        ],
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+              child: Column(
+                children: [
+                  FTextField(
+                    control: FTextFieldControl.managed(
+                      controller: _busqueda,
+                      onChange: _alCambiarBusqueda,
+                    ),
+                    hint: 'Buscar por nombre o correo',
+                    clearable: (value) => value.text.isNotEmpty,
+                    prefixBuilder: (context, style, variants) =>
+                        FTextField.prefixIconBuilder(
+                          context,
+                          style,
+                          variants,
+                          const Icon(Icons.search),
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FSelect<String>(
+                          hint: 'Todos los roles',
+                          items: const {
+                            'Todos los roles': 'todos',
+                            'Vecino': 'ciudadano',
+                            'Operario': 'empleado',
+                            'Administrador': 'admin',
+                          },
+                          control: FSelectControl<String>.lifted(
+                            value: _filtroRol,
+                            onChange: _cambiarRol,
                           ),
-                          Text(
-                            '${usuarios.length}',
-                            style: textTheme.labelLarge?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    );
-                  }
-                  return _UsuarioTile(usuario: usuarios[index - 1]);
-                },
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FSelect<String>(
+                          hint: 'Todos los estados',
+                          items: const {
+                            'Todos los estados': 'todos',
+                            'Activas': 'activa',
+                            'Inactivas': 'inactiva',
+                          },
+                          control: FSelectControl<String>.lifted(
+                            value: _filtroEstado,
+                            onChange: _cambiarEstado,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12, bottom: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _cargandoInicial
+                            ? 'Buscando…'
+                            : '$_total $_etiquetaTotal',
+                        style: TextStyle(
+                          color: context.theme.colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _contenido(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool get _hayFiltros =>
+      _busqueda.text.trim().isNotEmpty ||
+      _filtroRol != 'todos' ||
+      _filtroEstado != 'todos';
+
+  String get _etiquetaTotal {
+    if (_hayFiltros) {
+      return _total == 1 ? 'resultado' : 'resultados';
+    }
+    return _total == 1 ? 'cuenta' : 'cuentas';
+  }
+
+  Widget _contenido(BuildContext context) {
+    if (_cargandoInicial && _usuarios.isEmpty) {
+      return const Center(child: FCircularProgress());
+    }
+    if (_errorInicial != null && _usuarios.isEmpty) {
+      return _EstadoDirectorio(
+        icono: Icons.cloud_off_outlined,
+        titulo: 'No se pudo cargar',
+        detalle: _errorInicial!,
+        accion: FButton(
+          onPress: () => unawaited(_recargar()),
+          prefix: const Icon(Icons.refresh),
+          child: const Text('Reintentar'),
+        ),
+      );
+    }
+    if (!_cargandoInicial && _usuarios.isEmpty) {
+      return _EstadoDirectorio(
+        icono: _hayFiltros ? Icons.search_off : Icons.people_outline,
+        titulo: _hayFiltros ? 'Sin resultados' : 'No hay cuentas',
+        detalle: _hayFiltros ? 'Probá cambiar la búsqueda o los filtros.' : '',
+        accion: _hayFiltros
+            ? FButton(
+                variant: .ghost,
+                onPress: _limpiarFiltros,
+                child: const Text('Limpiar filtros'),
+              )
+            : FButton(
+                variant: .outline,
+                onPress: () => unawaited(_recargar()),
+                prefix: const Icon(Icons.refresh),
+                child: const Text('Actualizar'),
+              ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _recargar,
+      child: ListView.separated(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        itemCount: _usuarios.length + (_hayMas || _errorMas != null ? 1 : 0),
+        separatorBuilder: (_, _) =>
+            Divider(height: 1, color: context.theme.colors.border),
+        itemBuilder: (context, index) {
+          if (index < _usuarios.length) {
+            return _UsuarioTile(usuario: _usuarios[index]);
+          }
+          if (_errorMas != null) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: FButton(
+                  variant: .outline,
+                  onPress: () {
+                    setState(() => _errorMas = null);
+                    unawaited(_cargarMas());
+                  },
+                  prefix: const Icon(Icons.refresh),
+                  child: const Text('Reintentar carga'),
+                ),
               ),
             );
-          },
-        ),
+          }
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: FCircularProgress()),
+          );
+        },
       ),
     );
   }
@@ -134,54 +384,56 @@ class _UsuarioTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final nombre = '${usuario.nombre} ${usuario.apellido}'.trim();
-    final colorEstado = usuario.activo == false
-        ? colorScheme.error
-        : colorScheme.primary;
+    final colores = context.theme.colors;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 5),
-      leading: CircleAvatar(
-        backgroundColor: colorScheme.secondaryContainer,
-        foregroundColor: colorScheme.onSecondaryContainer,
-        child: Text(
-          usuario.nombre.isEmpty ? '?' : usuario.nombre[0].toUpperCase(),
-        ),
-      ),
-      title: Text(nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(usuario.email, maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 5),
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              Text(
-                usuario.rolParaMostrar,
-                style: textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  nombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              if (usuario.activo != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, size: 8, color: colorEstado),
-                    const SizedBox(width: 5),
-                    Text(
-                      usuario.activo! ? 'Activa' : 'Inactiva',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: colorEstado,
-                      ),
-                    ),
-                  ],
-                ),
+              FBadge(variant: .outline, child: Text(usuario.rolParaMostrar)),
             ],
           ),
+          const SizedBox(height: 2),
+          Text(
+            usuario.email,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colores.mutedForeground),
+          ),
+          if (usuario.activo != null) ...[
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Icon(
+                  Icons.circle,
+                  size: 8,
+                  color: usuario.activo!
+                      ? colores.primary
+                      : colores.destructive,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  usuario.activo! ? 'Activa' : 'Inactiva',
+                  style: TextStyle(
+                    color: colores.mutedForeground,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -204,14 +456,13 @@ class _EstadoDirectorio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icono, size: 40, color: colorScheme.onSurfaceVariant),
+            Icon(icono, size: 40, color: context.theme.colors.mutedForeground),
             const SizedBox(height: 16),
             Text(
               titulo,
@@ -223,7 +474,7 @@ class _EstadoDirectorio extends StatelessWidget {
               detalle,
               textAlign: TextAlign.center,
               style: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+                color: context.theme.colors.mutedForeground,
               ),
             ),
             const SizedBox(height: 20),

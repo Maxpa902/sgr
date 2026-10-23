@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\VotoController;
 use App\Http\Controllers\ReclamoController;
+use App\Http\Controllers\ReclamoAdminController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\SesionController;
 use App\Http\Controllers\TipoReclamoController;
@@ -38,5 +39,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
 
     Route::middleware('rol:admin')->group(function (): void {
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+        Route::get('/admin/reclamos', [ReclamoAdminController::class, 'index'])->name('admin.reclamos.index');
+        Route::get('/admin/tipos-reclamo', [TipoReclamoController::class, 'adminIndex'])->name('admin.tipos-reclamo.index');
     });
 });

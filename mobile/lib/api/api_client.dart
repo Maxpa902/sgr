@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../modelos/reclamo_mapa.dart';
+import '../modelos/reclamo_admin.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'api_exception.dart';
@@ -17,6 +18,32 @@ class SesionIniciada {
 
   final String token;
   final Usuario usuario;
+}
+
+/// Un bloque de cuentas y el cursor para solicitar el siguiente.
+class PaginaUsuarios {
+  const PaginaUsuarios({
+    required this.usuarios,
+    required this.total,
+    required this.proximoCursor,
+  });
+
+  final List<Usuario> usuarios;
+  final int total;
+  final String? proximoCursor;
+}
+
+/// Un bloque de reclamos y el cursor para solicitar el siguiente.
+class PaginaReclamosAdmin {
+  const PaginaReclamosAdmin({
+    required this.reclamos,
+    required this.total,
+    required this.proximoCursor,
+  });
+
+  final List<ReclamoAdmin> reclamos;
+  final int total;
+  final String? proximoCursor;
 }
 
 /// Habla con la API del server. Las pantallas no usan `http` directamente:
@@ -74,17 +101,64 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
-  /// Todas las cuentas, ordenadas por apellido y nombre. Disponible solo para admin.
-  Future<List<Usuario>> listarUsuarios() async {
-    final json = await _get('/api/usuarios');
-    final data = json['data'];
-    if (data is! List) {
-      return [];
+  /// Un bloque de cuentas filtrado, ordenado por apellido y nombre.
+  Future<PaginaUsuarios> listarUsuarios({
+    String? busqueda,
+    String? rol,
+    String? estado,
+    String? cursor,
+  }) async {
+    final parametros = <String, Object>{};
+    if (busqueda != null && busqueda.isNotEmpty) {
+      parametros['q'] = busqueda;
     }
-    return data
-        .whereType<Map<String, dynamic>>()
-        .map(Usuario.fromJson)
-        .toList(growable: false);
+    if (rol != null) {
+      parametros['rol'] = rol;
+    }
+    if (estado != null) {
+      parametros['estado'] = estado;
+    }
+    if (cursor != null) {
+      parametros['cursor'] = cursor;
+    }
+
+    final json = await _get('/api/usuarios', parametros: parametros);
+    final data = json['data'] as List? ?? const [];
+    final metadata = json['meta'] as Map<String, dynamic>? ?? const {};
+    return PaginaUsuarios(
+      usuarios: data
+          .whereType<Map<String, dynamic>>()
+          .map(Usuario.fromJson)
+          .toList(growable: false),
+      total: (metadata['total'] as num?)?.toInt() ?? data.length,
+      proximoCursor: metadata['next_cursor'] as String?,
+    );
+  }
+
+  /// Lista reclamos para el panel de admin, con búsqueda, filtros y cursor.
+  Future<PaginaReclamosAdmin> listarReclamosAdmin({
+    String? busqueda,
+    String? estado,
+    int? tipoId,
+    String? cursor,
+  }) async {
+    final parametros = <String, Object>{};
+    if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
+    if (estado != null) parametros['estado'] = estado;
+    if (tipoId != null) parametros['tipo'] = '$tipoId';
+    if (cursor != null) parametros['cursor'] = cursor;
+
+    final json = await _get('/api/admin/reclamos', parametros: parametros);
+    final data = json['data'] as List? ?? const [];
+    final metadata = json['meta'] as Map<String, dynamic>? ?? const {};
+    return PaginaReclamosAdmin(
+      reclamos: data
+          .whereType<Map<String, dynamic>>()
+          .map(ReclamoAdmin.fromJson)
+          .toList(growable: false),
+      total: (metadata['total'] as num?)?.toInt() ?? data.length,
+      proximoCursor: metadata['next_cursor'] as String?,
+    );
   }
 
   /// Revoca el [token] en el server.
@@ -95,6 +169,15 @@ class ApiClient {
   /// Las categorías que se ofrecen para cargar y filtrar reclamos.
   Future<List<TipoReclamo>> tiposDeReclamo() async {
     final json = await _get('/api/tipos-reclamo');
+    return [
+      for (final tipo in json['data'] as List)
+        TipoReclamo.fromJson(tipo as Map<String, dynamic>),
+    ];
+  }
+
+  /// Categorías activas e inactivas para los filtros de administración.
+  Future<List<TipoReclamo>> tiposDeReclamoAdmin() async {
+    final json = await _get('/api/admin/tipos-reclamo');
     return [
       for (final tipo in json['data'] as List)
         TipoReclamo.fromJson(tipo as Map<String, dynamic>),
@@ -152,9 +235,7 @@ class ApiClient {
     }
 
     if (imagen != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('foto', imagen.path),
-      );
+      request.files.add(await http.MultipartFile.fromPath('foto', imagen.path));
     }
 
     final response = await _procesar(
@@ -166,18 +247,15 @@ class ApiClient {
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
   }
 
- 
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {
-    final json = await _get('/api/reclamos/$reclamoId/votos'); 
+    final json = await _get('/api/reclamos/$reclamoId/votos');
     final data = json['data'];
     if (data is! List) return [];
     return data.cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) async {
-    return await _post('/api/reclamos/$reclamoId/votar', {
-      'valor': valor,
-    });
+    return await _post('/api/reclamos/$reclamoId/votar', {'valor': valor});
   }
 
   SesionIniciada _sesionDesde(Map<String, dynamic> json) {
@@ -269,7 +347,8 @@ class ApiClient {
   }) {
     cronometro.stop();
     // Evita incluir parámetros que podrían contener datos sensibles.
-    final linea = '${DateTime.now().toIso8601String()} '
+    final linea =
+        '${DateTime.now().toIso8601String()} '
         '$metodo ${uri.path} - ${cronometro.elapsedMilliseconds} ms '
         '(resultado: $resultado)\n';
     _escriturasDelLog = _escriturasDelLog.then((_) async {

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../modelos/reclamo_mapa.dart';
+import '../modelos/reclamo_admin.dart';
+import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'almacen_token.dart';
 
@@ -44,8 +46,33 @@ class Sesion extends ChangeNotifier {
   /// El usuario logueado, o `null` si no hay sesión.
   Usuario? get usuario => _usuario;
 
-  /// Consulta el directorio de cuentas del sistema (el server exige rol admin).
-  Future<List<Usuario>> listarUsuarios() => _api.listarUsuarios();
+  /// Consulta un bloque del directorio de cuentas (el server exige rol admin).
+  Future<PaginaUsuarios> listarUsuarios({
+    String? busqueda,
+    String? rol,
+    String? estado,
+    String? cursor,
+  }) => _api.listarUsuarios(
+    busqueda: busqueda,
+    rol: rol,
+    estado: estado,
+    cursor: cursor,
+  );
+
+  /// Consulta un bloque filtrado de reclamos para el directorio del admin.
+  Future<PaginaReclamosAdmin> listarReclamosAdmin({
+    String? busqueda,
+    String? estado,
+    int? tipoId,
+    String? cursor,
+  }) => _api.listarReclamosAdmin(
+    busqueda: busqueda,
+    estado: estado,
+    tipoId: tipoId,
+    cursor: cursor,
+  );
+
+  Future<List<TipoReclamo>> tiposDeReclamoAdmin() => _api.tiposDeReclamoAdmin();
 
   /// Obtiene la lista de reclamos creados por el usuario actual o en los que votó.
   Future<List<ReclamoMapa>> misReclamos() => _api.misReclamos();
