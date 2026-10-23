@@ -56,20 +56,24 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     try {
       final res = await widget.sesion.votarReclamo(widget.reclamo.id, valor);
       if (mounted) {
+        final bool votoRetirado = _miVotoActual == valor;
+
         setState(() {
           _confirmaciones = res['confirmaciones'] as int;
           _desmentidas = res['desmentidas'] as int;
 
-          // Si volvió a presionar la misma opción se borró el voto, si no se cambió/guardó
-          if (_miVotoActual == valor) {
+          if (votoRetirado) {
             _miVotoActual = null;
           } else {
             _miVotoActual = valor;
           }
         });
-        _mostrarMensaje(
-          res['message']?.toString() ?? 'Voto registrado correctamente',
-        );
+
+        final textoMensaje = votoRetirado
+            ? 'Se quitó tu voto correctamente'
+            : (res['message']?.toString() ?? 'Voto registrado correctamente');
+
+        _mostrarMensaje(textoMensaje);
         widget.alVotar?.call();
       }
     } on ApiException catch (e) {
@@ -191,6 +195,45 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Barrita superior de arrastre del modal
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // AVISO EN LA PARTE SUPERIOR
+            if (_mensajeNotificacion != null) ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Text(
+                  _mensajeNotificacion!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.blue.shade900,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+
             Row(
               children: [
                 CircleAvatar(
@@ -336,28 +379,6 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
                   onPressed: () => _mostrarListaVotantes(context),
                   icon: const Icon(Icons.people_alt_outlined, size: 18),
                   label: const Text('Ver lista de votantes'),
-                ),
-              ),
-            ],
-            if (_mensajeNotificacion != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _mensajeNotificacion!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.blue.shade900,
-                    fontWeight: FontWeight.w500,
-                  ),
                 ),
               ),
             ],
