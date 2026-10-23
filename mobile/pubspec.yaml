@@ -43,6 +43,7 @@ dependencies:
   flutter_map_marker_cluster: ^8.2.2
   geolocator: ^14.1.1
   image_picker: ^1.2.4
+  forui: ^0.25.0
 
 dev_dependencies:
   flutter_test:

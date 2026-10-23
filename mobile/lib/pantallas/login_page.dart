@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
 import '../mapa/zona.dart';
@@ -22,7 +23,6 @@ class _LoginPageState extends State<LoginPage> {
   final _password = TextEditingController();
 
   bool _enviando = false;
-  bool _mostrarPassword = false;
   String? _error;
 
   @override
@@ -73,8 +73,9 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
 
-    return Scaffold(
-      body: SafeArea(
+    return FScaffold(
+      childPad: false,
+      child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(28),
@@ -102,43 +103,37 @@ class _LoginPageState extends State<LoginPage> {
                         style: textos.bodyLarge,
                       ),
                       const SizedBox(height: 32),
-                      TextFormField(
-                        controller: _email,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
-                        ),
+                      FTextFormField(
+                        control: FTextFieldControl.managed(controller: _email),
+                        label: const Text('Email'),
+                        prefixBuilder: (context, style, variants) =>
+                            FTextField.prefixIconBuilder(
+                              context,
+                              style,
+                              variants,
+                              const Icon(Icons.email_outlined),
+                            ),
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         textInputAction: TextInputAction.next,
                         validator: validarEmail,
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _password,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _mostrarPassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            tooltip: _mostrarPassword
-                                ? 'Ocultar contraseña'
-                                : 'Mostrar contraseña',
-                            onPressed: () => setState(
-                              () => _mostrarPassword = !_mostrarPassword,
-                            ),
-                          ),
+                      FTextFormField.password(
+                        control: FTextFieldControl.managed(
+                          controller: _password,
                         ),
-                        obscureText: !_mostrarPassword,
+                        label: const Text('Contraseña'),
+                        prefixBuilder: (context, style, control, variants) =>
+                            FTextField.prefixIconBuilder(
+                              context,
+                              style,
+                              variants,
+                              const Icon(Icons.lock_outline),
+                            ),
                         autofillHints: const [AutofillHints.password],
                         textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _ingresar(),
+                        onSubmit: (_) => _ingresar(),
                         validator: obligatorio('Ingresá tu contraseña.'),
                       ),
                       if (_error case final error?) ...[
@@ -146,8 +141,8 @@ class _LoginPageState extends State<LoginPage> {
                         MensajeError(error),
                       ],
                       const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _enviando ? null : _ingresar,
+                      FButton(
+                        onPress: _enviando ? null : _ingresar,
                         child: _enviando
                             ? const SizedBox.square(
                                 dimension: 18,
@@ -158,8 +153,9 @@ class _LoginPageState extends State<LoginPage> {
                             : const Text('Ingresar'),
                       ),
                       const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _enviando ? null : _irARegistro,
+                      FButton(
+                        variant: .ghost,
+                        onPress: _enviando ? null : _irARegistro,
                         child: const Text('¿No tenés cuenta? Creá una'),
                       ),
                     ],

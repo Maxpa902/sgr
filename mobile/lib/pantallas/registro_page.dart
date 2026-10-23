@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
 import '../sesion/sesion.dart';
@@ -94,9 +95,17 @@ class _RegistroPageState extends State<RegistroPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crear cuenta')),
-      body: SafeArea(
+    return FScaffold(
+      header: FHeader.nested(
+        title: const Text('Crear cuenta'),
+        prefixes: [
+          FHeaderAction.back(
+            onPress: _enviando ? null : () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+      childPad: false,
+      child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -175,8 +184,8 @@ class _RegistroPageState extends State<RegistroPage> {
                         MensajeError(error),
                         const SizedBox(height: 16),
                       ],
-                      FilledButton(
-                        onPressed: _enviando ? null : _crearCuenta,
+                      FButton(
+                        onPress: _enviando ? null : _crearCuenta,
                         child: _enviando
                             ? const SizedBox.square(
                                 dimension: 18,
@@ -185,6 +194,14 @@ class _RegistroPageState extends State<RegistroPage> {
                                 ),
                               )
                             : const Text('Crear cuenta'),
+                      ),
+                      const SizedBox(height: 8),
+                      FButton(
+                        variant: .ghost,
+                        onPress: _enviando
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: const Text('¿Ya tenés cuenta? Iniciá sesión'),
                       ),
                     ],
                   ),
@@ -213,23 +230,52 @@ class _RegistroPageState extends State<RegistroPage> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controlador,
-        decoration: InputDecoration(
-          labelText: etiqueta,
-          helperText: ayuda,
-          prefixIcon: Icon(icono),
-          border: const OutlineInputBorder(),
-        ),
-        keyboardType: teclado,
-        obscureText: oculto,
-        autofillHints: autofill == null ? null : [autofill],
-        textInputAction: ultimo ? TextInputAction.done : TextInputAction.next,
-        onFieldSubmitted: ultimo ? (_) => _crearCuenta() : null,
-        onChanged: (_) => _limpiarErrorDelServer(campo),
-        validator: validador,
-        forceErrorText: _erroresDelServer[campo],
-      ),
+      child: oculto
+          ? FTextFormField.password(
+              control: FTextFieldControl.managed(
+                controller: controlador,
+                onChange: (_) => _limpiarErrorDelServer(campo),
+              ),
+              label: Text(etiqueta),
+              description: ayuda == null ? null : Text(ayuda),
+              prefixBuilder: (context, style, control, variants) =>
+                  FTextField.prefixIconBuilder(
+                    context,
+                    style,
+                    variants,
+                    Icon(icono),
+                  ),
+              autofillHints: autofill == null ? const [] : [autofill],
+              textInputAction: ultimo
+                  ? TextInputAction.done
+                  : TextInputAction.next,
+              onSubmit: ultimo ? (_) => _crearCuenta() : null,
+              validator: validador,
+              forceErrorText: _erroresDelServer[campo],
+            )
+          : FTextFormField(
+              control: FTextFieldControl.managed(
+                controller: controlador,
+                onChange: (_) => _limpiarErrorDelServer(campo),
+              ),
+              label: Text(etiqueta),
+              description: ayuda == null ? null : Text(ayuda),
+              prefixBuilder: (context, style, variants) =>
+                  FTextField.prefixIconBuilder(
+                    context,
+                    style,
+                    variants,
+                    Icon(icono),
+                  ),
+              keyboardType: teclado,
+              autofillHints: autofill == null ? null : [autofill],
+              textInputAction: ultimo
+                  ? TextInputAction.done
+                  : TextInputAction.next,
+              onSubmit: ultimo ? (_) => _crearCuenta() : null,
+              validator: validador,
+              forceErrorText: _erroresDelServer[campo],
+            ),
     );
   }
 }

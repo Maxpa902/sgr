@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import 'api/api_client.dart';
 import 'config.dart';
@@ -36,10 +37,14 @@ class SgrApp extends StatelessWidget {
     return MaterialApp(
       title: 'SGR',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: FLocalizations.localizationsDelegates,
+      supportedLocales: FLocalizations.supportedLocales,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176B5B)),
         useMaterial3: true,
       ),
+      builder: (context, child) =>
+          FTheme(data: FTheme.neutral.light.touch, child: child!),
       // Cada vez que la sesión avisa un cambio, se vuelve a elegir la pantalla.
       home: ListenableBuilder(
         listenable: sesion,
