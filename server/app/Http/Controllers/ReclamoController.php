@@ -50,39 +50,8 @@ class ReclamoController extends Controller
         return ReclamoMapaResource::collection($reclamos);
     }
 
-    /**
-     * Busca reclamos públicos activos cercanos del mismo tipo para verificar si ya existe.
-     * Calcula la distancia en metros utilizando la fórmula de Haversine en SQL.
-     */
-    public function checkDuplicates(Request $request): JsonResponse
-    {
-        $data =$request->validate([
-            'latitud' => ['required', 'numeric'],
-            'longitud' => ['required', 'numeric'],
-            'tipo_reclamo_id' => ['required', 'integer', Rule::exists('tipos_reclamo', 'id')],
-            'radio_metros' => ['sometimes', 'integer', 'min:10', 'max:500'],
-        ]);
-
-        $lat =$data['latitud'];
-        $lng =$data['longitud'];
-        $radio =$data['radio_metros'] ?? 100;
-
-        $duplicados = Reclamo::query()
-            ->publicos()
-            ->whereHas('estado', fn (Builder $query) =>$query->whereIn('nombre', EstadoReclamo::ACTIVOS))
-            ->where('tipo_reclamo_id', $data['tipo_reclamo_id'])
-            ->selectRaw("*, ( 6371000 * acos( cos( radians(?) ) * cos( radians( latitud ) ) * cos( radians( longitud ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitud ) ) ) ) AS distancia_metros", [$lat, $lng,$lat])
-            ->having("distancia_metros", "<=", $radio)
-            ->orderBy("distancia_metros")
-            ->with(['tipoReclamo', 'estado'])
-            ->get();
-
-        return response()->json([
-            'has_duplicates' => $duplicados->isNotEmpty(),
-            'reclamos' => ReclamoMapaResource::collection($duplicados),
-        ]);
-    }
-
+    
+      
     /**
      * Registra un nuevo reclamo aplicando el filtro de IA con Sightengine para la foto.
      */

@@ -29,7 +29,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::get('/usuario', [UsuarioActualController::class, 'show'])->name('usuario.show');
     Route::get('/tipos-reclamo', [TipoReclamoController::class, 'index'])->name('tipos-reclamo.index');
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
-    Route::post('/reclamos/check-duplicates', [ReclamoController::class, 'checkDuplicates'])->name('reclamos.check-duplicates');
+    
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
 
     Route::middleware('rol:admin')->group(function (): void {
