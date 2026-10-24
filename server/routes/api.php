@@ -33,10 +33,6 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
     
-    Route::get('/reclamos/{reclamo}/votos', [VotoController::class, 'index'])->name('reclamos.votos.index');
-    Route::post('/reclamos/{reclamo}/votar', [VotoController::class, 'store'])->name('reclamos.votar');
-
-
     Route::middleware('rol:admin')->group(function (): void {
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
     });
