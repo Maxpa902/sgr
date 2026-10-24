@@ -143,13 +143,24 @@ class ReclamoController extends Controller
             $maleUnderwear = $classes['male_underwear'] ?? 0;
 
             // Frena la petición si hay rostros/personas, gore o vestimenta/contenido inapropiado
-            if (
-                count($faces) > 0 ||
-                $rawNudity > 0.50 || $erotica > 0.50 || $sexualActivity > 0.50 || $goreProb > 0.50 ||
-                $bikini > 0.20 || $maleChest > 0.20 || $lingerie > 0.20 || $maleUnderwear > 0.20 || $suggestive > 0.40
-            ) {
+            // 1. Contenido indebido, sexual explícito o gore
+            if ($rawNudity > 0.50 || $sexualActivity > 0.50 || $goreProb > 0.50) {
                 return response()->json([
-                    'message' => 'La foto fue rechazada automáticamente. Las imágenes no deben contener personas ni contenido inapropiado.'
+                    'message' => 'La foto fue rechazada por contener material indebido, sexual o gore.'
+                ], 422);
+            }
+
+            // 2. Contenido erótico, bikini o vestimenta sugestiva
+            if ($erotica > 0.50 || $bikini > 0.20 || $lingerie > 0.20 || $maleUnderwear > 0.20 || $suggestive > 0.40) {
+                return response()->json([
+                    'message' => 'La foto fue rechazada por contener material erótico o vestimenta inapropiada.'
+                ], 422);
+            }
+
+            // 3. Presencia de personas, rostros o torsos al descubierto
+            if (count($faces) > 0 || $maleChest > 0.20) {
+                return response()->json([
+                    'message' => 'La foto fue rechazada. No se permiten personas en la imagen, solo la infraestructura o el daño público.'
                 ], 422);
             }
         }
