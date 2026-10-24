@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\VotoController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\SesionController;
@@ -31,6 +32,10 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
     
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
+    
+    Route::get('/reclamos/{reclamo}/votos', [VotoController::class, 'index'])->name('reclamos.votos.index');
+    Route::post('/reclamos/{reclamo}/votar', [VotoController::class, 'store'])->name('reclamos.votar');
+
 
     Route::middleware('rol:admin')->group(function (): void {
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
