@@ -77,7 +77,7 @@ Crear y editar requieren no estar suspendido.
 
 - Usan la misma app móvil que los vecinos, con las vistas de trabajo habilitadas por su rol.
 - Pueden consultar todos los reclamos desde la vista de trabajo, con su historial y las observaciones internas.
-- **No hay asignación de reclamos:** cualquier operario puede tomar cualquier reclamo y cambiar su estado según [Transiciones](estados-reclamos.md#transiciones). El historial registra qué operario hizo cada cambio, con la fecha y la observación, y así queda constancia de quién trabajó en cada reclamo.
+- Un operario puede tomar para sí un reclamo pendiente sin responsable. El admin puede asignar o reasignar un reclamo pendiente a un operario activo o a sí mismo. La asignación no cambia el estado; el responsable debe iniciar el trabajo para pasar a `en_proceso`. El historial registra cada transición de estado.
 - Pueden rechazar un reclamo únicamente marcándolo como falso, lo que genera una [sanción](#sanciones) para su creador. No pueden revocar sanciones.
 - Cuando usan las funciones de vecino (cargar reclamos, votar o comentar), se aplican las mismas reglas y límites que a cualquier vecino.
 
@@ -110,9 +110,9 @@ Ideas que se sacaron del MVP para pensarlas mejor. Quedan documentadas para no p
 
 La idea es comprobar que cada cuenta pertenece a una persona real, por ejemplo validando el DNI con un proveedor externo, antes de habilitarla para cargar reclamos. Se descartó la simulación con resultado aleatorio. Hoy el DNI se pide al registrarse y no puede repetirse, pero no se verifica. Las columnas `estado_verificacion`, `metodo_verificacion`, `referencia_verificacion` e `identidad_verificada_en` de `users` quedan reservadas para esto; hoy no se usan ni bloquean ninguna acción.
 
-### Cuadrillas y asignación de reclamos
+### Cuadrillas
 
-La idea es agrupar a los operarios en equipos (cuadrillas), asignarles reclamos y registrar cómo se resolvió cada uno. Se quitaron las tablas y columnas para rediseñarlo con más tiempo. Mientras tanto, cualquier operario toma cualquier reclamo y el [historial](estados-reclamos.md#historial-y-observaciones) registra quién hizo cada cambio.
+La asignación actual es individual. Agrupar operarios en equipos (cuadrillas) queda pendiente para más adelante.
 
 ### Reclamos privados
 

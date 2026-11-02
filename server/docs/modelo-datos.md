@@ -72,6 +72,12 @@ Los campos de verificación de identidad (`estado_verificacion`, `metodo_verific
 | `usuario_id` | `foreignId()` | Obligatorio; referencia a `users.id` (creador) |
 | `tipo_reclamo_id` | `foreignId()` | Obligatorio; referencia a `tipos_reclamo.id` |
 | `estado_id` | `foreignId()` | Obligatorio; referencia a `estados_reclamo.id`; inicialmente pendiente |
+| `responsable_id` | `foreignId()` | Opcional; usuario actualmente asignado |
+| `asignado_por_id` | `foreignId()` | Opcional; usuario que hizo la asignación actual |
+| `asignado_en` | `timestamp()` | Opcional; fecha de la asignación actual |
+| `ultimo_responsable_id` | `foreignId()` | Opcional; último responsable que dejó de estar asignado |
+| `desasignado_por_id` | `foreignId()` | Opcional; usuario que hizo la última desasignación o reasignación |
+| `desasignado_en` | `timestamp()` | Opcional; fecha de la última desasignación o reasignación |
 | `titulo` | `string(150)` | Opcional (`nullable`); si está vacío, se muestra el nombre de la categoría |
 | `descripcion` | `text()` | Obligatorio |
 | `latitud` | `decimal(10, 7)` | Obligatorio; ubicación en el mapa |
@@ -136,7 +142,7 @@ Restricción única compuesta sobre `(usuario_id, reclamo_id)`: un usuario solo 
 | `visibilidad` | `string(20)` | `publica` o `interna`; predeterminado: `publica`; determina quién ve la observación |
 | `created_at` | `timestamp()` | Fecha en que se registró el cambio |
 
-El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por `created_at` y, ante fechas iguales, por `id`. `usuario_id = null` representa al sistema; no se necesita un usuario ficticio. Como no hay asignación de reclamos, `usuario_id` es el registro de qué operario trabajó en cada reclamo.
+El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por `created_at` y, ante fechas iguales, por `id`. `usuario_id = null` representa al sistema; no se necesita un usuario ficticio. El autor de cada transición se registra independientemente del responsable actual del reclamo.
 
 `reclamos.estado_id` guarda el estado actual. Las fechas finales se obtienen del historial, sin campos `resuelto_en` ni `rechazado_en` en `reclamos`. La observación del rechazo usa `observacion`, sin un campo `motivo_rechazo` separado. Las reglas de registro, transacciones y visibilidad están en [Historial y observaciones](estados-reclamos.md#historial-y-observaciones).
 

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
+import '../mapa/estilos.dart';
 import '../modelos/reclamo_admin.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
+import 'detalle_reclamo_admin_page.dart';
 
 class ReclamosAdminPage extends StatefulWidget {
   const ReclamosAdminPage({super.key, required this.sesion});
@@ -143,8 +145,9 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
         cursor == null ||
         _cargandoInicial ||
         _cargandoMas ||
-        _errorMas != null)
+        _errorMas != null) {
       return;
+    }
 
     final version = _versionConsulta;
     setState(() => _cargandoMas = true);
@@ -302,8 +305,9 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
       _filtroTipo != 'todos';
 
   Widget _contenido(BuildContext context) {
-    if (_cargandoInicial && _reclamos.isEmpty)
+    if (_cargandoInicial && _reclamos.isEmpty) {
       return const Center(child: FCircularProgress());
+    }
     if (_errorInicial != null && _reclamos.isEmpty) {
       return _EstadoReclamos(
         icono: Icons.cloud_off_outlined,
@@ -346,8 +350,13 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
         separatorBuilder: (_, _) =>
             Divider(height: 1, color: context.theme.colors.border),
         itemBuilder: (context, index) {
-          if (index < _reclamos.length)
-            return _ReclamoTile(reclamo: _reclamos[index]);
+          if (index < _reclamos.length) {
+            return _ReclamoTile(
+              reclamo: _reclamos[index],
+              sesion: widget.sesion,
+              alVolver: _recargar,
+            );
+          }
           if (_errorMas != null) {
             return Padding(
               padding: const EdgeInsets.all(16),
@@ -375,9 +384,15 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
 }
 
 class _ReclamoTile extends StatelessWidget {
-  const _ReclamoTile({required this.reclamo});
+  const _ReclamoTile({
+    required this.reclamo,
+    required this.sesion,
+    required this.alVolver,
+  });
 
   final ReclamoAdmin reclamo;
+  final Sesion sesion;
+  final Future<void> Function() alVolver;
 
   @override
   Widget build(BuildContext context) {
@@ -385,55 +400,83 @@ class _ReclamoTile extends StatelessWidget {
     final fecha = reclamo.creadoEn.toLocal();
     final fechaTexto =
         '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
+    final colorEstado = colorDelEstado(reclamo.estado);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  reclamo.titulo,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+    return FTappable(
+      onPress: () async {
+        var huboCambios = false;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => DetalleReclamoAdminPage(
+              sesion: sesion,
+              reclamoId: reclamo.id,
+              alCambiar: () => huboCambios = true,
+            ),
+          ),
+        );
+        if (context.mounted && huboCambios) await alVolver();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    reclamo.titulo,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              FBadge(
-                variant: .outline,
-                child: Text(_estadoParaMostrar(reclamo.estado)),
+                const SizedBox(width: 8),
+                FBadge(
+                  variant: .outline,
+                  style: .delta(
+                    decoration: .shapeDelta(
+                      color: colorEstado.withValues(alpha: 0.10),
+                    ),
+                    labelTextStyle: .delta(
+                      color: colorEstado,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: Text(_estadoParaMostrar(reclamo.estado)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${reclamo.tipo} · $fechaTexto',
+              style: TextStyle(color: muted),
+            ),
+            if (reclamo.creador.isNotEmpty ||
+                reclamo.emailCreador.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                [
+                  reclamo.creador,
+                  reclamo.emailCreador,
+                ].where((dato) => dato.isNotEmpty).join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: muted),
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text('${reclamo.tipo} · $fechaTexto', style: TextStyle(color: muted)),
-          if (reclamo.creador.isNotEmpty ||
-              reclamo.emailCreador.isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(
-              [
-                reclamo.creador,
-                reclamo.emailCreador,
-              ].where((dato) => dato.isNotEmpty).join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: muted),
-            ),
+            if ((reclamo.direccion ?? '').isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                reclamo.direccion!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: muted),
+              ),
+            ],
           ],
-          if ((reclamo.direccion ?? '').isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(
-              reclamo.direccion!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: muted),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

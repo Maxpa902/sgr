@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/reclamo_admin.dart';
+import '../modelos/reclamo_detalle_admin.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'api_exception.dart';
@@ -159,6 +160,38 @@ class ApiClient {
       total: (metadata['total'] as num?)?.toInt() ?? data.length,
       proximoCursor: metadata['next_cursor'] as String?,
     );
+  }
+
+  /// Obtiene los datos completos de un reclamo para la vista de administración.
+  Future<ReclamoDetalleAdmin> obtenerReclamoAdmin(int id) async {
+    final json = await _get('/api/admin/reclamos/$id');
+    return ReclamoDetalleAdmin.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> asignarReclamo(int id, int responsableId) async {
+    await _post('/api/reclamos/$id/asignacion', {
+      'responsable_id': responsableId,
+    });
+  }
+
+  Future<void> desasignarReclamo(int id) async {
+    final uri = _uri('/api/reclamos/$id/asignacion');
+    await _procesar(
+      _http.delete(uri, headers: _encabezados()),
+      metodo: 'DELETE',
+      uri: uri,
+    );
+  }
+
+  Future<void> rechazarReclamo(
+    int id, {
+    required String observacion,
+    required bool esFalso,
+  }) async {
+    await _post('/api/reclamos/$id/rechazar', {
+      'observacion': observacion,
+      'es_falso': esFalso,
+    });
   }
 
   /// Revoca el [token] en el server.

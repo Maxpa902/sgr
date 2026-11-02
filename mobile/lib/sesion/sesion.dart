@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/reclamo_admin.dart';
+import '../modelos/reclamo_detalle_admin.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'almacen_token.dart';
@@ -71,6 +72,9 @@ class Sesion extends ChangeNotifier {
     tipoId: tipoId,
     cursor: cursor,
   );
+
+  Future<ReclamoDetalleAdmin> obtenerReclamoAdmin(int id) =>
+      _api.obtenerReclamoAdmin(id);
 
   Future<List<TipoReclamo>> tiposDeReclamoAdmin() => _api.tiposDeReclamoAdmin();
 

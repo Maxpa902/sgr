@@ -25,14 +25,16 @@ stateDiagram-v2
 | Transición | Quién la realiza | Condiciones / detalle |
 | --- | --- | --- |
 | Creación → `pendiente` | Vecino, u operario en función de vecino, no suspendido | Menos de tres reclamos propios activos; observación no necesaria |
-| `pendiente` → `en_proceso` | Cualquier operario o admin | Observación opcional |
+| `pendiente` → `en_proceso` | Responsable asignado (operario o admin autoasignado) | Observación opcional |
 | `en_proceso` → `resuelto` | Cualquier operario o admin | Observación obligatoria, pública o interna |
 | `pendiente` o `en_proceso` → `rechazado` | Admin | Observación obligatoria y pública; indicar si el reclamo era falso, lo que crea una [sanción](reglas-sistema.md#sanciones) |
 | `pendiente` o `en_proceso` → `rechazado` por falso | Cualquier operario | Observación obligatoria y pública; siempre crea una [sanción](reglas-sistema.md#sanciones). Los rechazos por otros motivos los hace el admin |
 
 `resuelto` y `rechazado` son estados finales: no hay reapertura, vuelta atrás ni transición entre ellos. No se permite pasar directamente de `pendiente` a `resuelto`. Los cambios se registran según [Historial y observaciones](#historial-y-observaciones).
 
-No hay asignación de reclamos: cualquier operario puede tomar cualquier reclamo. El historial registra quién hizo cada transición.
+La asignación es independiente del estado: un reclamo asignado sigue `pendiente` hasta que su responsable comienza el trabajo. Un operario puede tomar para sí un reclamo pendiente sin responsable; el administrador puede asignarlo a un operario activo o a sí mismo, y reasignarlo mientras siga pendiente. Se guardan el responsable, autor y fecha de la asignación actual, además del último responsable desasignado, quién lo desasignó y cuándo. Reasignar directamente a otra persona registra la salida del responsable anterior como última desasignación. Una nueva desasignación reemplaza la anterior; no se mantiene un historial completo de asignaciones. El inicio exige que quien actúa sea el responsable asignado y registra la transición en el historial de estados.
+
+La API de personal usa `POST /api/reclamos/{id}/asignacion` con `responsable_id` para tomar o asignar, `POST /api/reclamos/{id}/comenzar` para iniciar y `GET /api/reclamos/{id}/trabajo` para consultar la asignación. El admin puede quitar la asignación de un reclamo pendiente con `DELETE /api/reclamos/{id}/asignacion`. Para rechazar un reclamo pendiente o en proceso usa `POST /api/reclamos/{id}/rechazar` con `observacion` obligatoria y `es_falso` booleano obligatorio. El rechazo registra la observación pública y aplica la sanción si corresponde. Las operaciones de escritura devuelven conflicto si el reclamo ya no cumple las condiciones.
 
 ## Baja lógica
 
@@ -41,6 +43,8 @@ La baja lógica no es un estado. Solo se permite bajo las [condiciones de elimin
 ## Historial y observaciones
 
 La creación registra el estado inicial. Cada transición actualiza `reclamos.estado_id` y `updated_at` y agrega una fila al historial dentro de una misma transacción. El autor es el usuario que actuó o `null` si fue el sistema; así queda registrado qué operario trabajó en cada reclamo. El historial no se edita ni se borra.
+
+El detalle administrativo entrega estos registros ordenados por fecha y, en caso de empate, por id. Los reclamos creados antes de registrar el estado inicial pueden no tener esa fila; su fecha de creación sigue disponible en el reclamo y no se inventan registros históricos.
 
 Las fechas de resolución y rechazo se obtienen de `created_at` de la transición al estado final. No se guardan `resuelto_en` ni `rechazado_en` en `reclamos`.
 

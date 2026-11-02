@@ -36,12 +36,34 @@ class Reclamo extends Model
             'latitud' => 'decimal:7',
             'longitud' => 'decimal:7',
             'es_publico' => 'boolean',
+            'asignado_en' => 'datetime',
+            'desasignado_en' => 'datetime',
         ];
     }
 
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    public function responsable(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsable_id');
+    }
+
+    public function asignadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'asignado_por_id');
+    }
+
+    public function ultimoResponsable(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'ultimo_responsable_id');
+    }
+
+    public function desasignadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'desasignado_por_id');
     }
 
     public function tipoReclamo(): BelongsTo

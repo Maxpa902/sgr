@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
@@ -191,15 +192,26 @@ class ReclamoController extends Controller
             }
         }
 
-        $reclamo = $usuario->reclamos()->create([
-            'titulo' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'],
-            'tipo_reclamo_id' => $validated['tipo_reclamo_id'],
-            'latitud' => $validated['latitud'],
-            'longitud' => $validated['longitud'],
-            'direccion' => $direccion,
-            'estado_id' => 1,
-        ]);
+        $pendiente = EstadoReclamo::where('nombre', 'pendiente')->firstOrFail();
+        $reclamo = DB::transaction(function () use ($usuario, $validated, $direccion, $pendiente) {
+            $reclamo = $usuario->reclamos()->create([
+                'titulo' => $validated['titulo'],
+                'descripcion' => $validated['descripcion'],
+                'tipo_reclamo_id' => $validated['tipo_reclamo_id'],
+                'latitud' => $validated['latitud'],
+                'longitud' => $validated['longitud'],
+                'direccion' => $direccion,
+                'estado_id' => $pendiente->id,
+            ]);
+            $reclamo->historialEstados()->create([
+                'estado_id' => $pendiente->id,
+                'usuario_id' => $usuario->id,
+                'visibilidad' => 'publica',
+                'created_at' => $reclamo->created_at,
+            ]);
+
+            return $reclamo;
+        });
 
         if ($request->hasFile('foto')) {
             $path = $request->file('foto')->store('reclamos', 'public');

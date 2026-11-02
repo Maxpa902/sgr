@@ -7,9 +7,10 @@ const estadosDelMapa = ['pendiente', 'en_proceso', 'resuelto'];
 const estadosPorDefecto = {'pendiente', 'en_proceso'};
 
 Color colorDelEstado(String estado) => switch (estado) {
-  'pendiente' => const Color(0xFFD32F2F),
-  'en_proceso' => const Color(0xFFEF6C00),
-  'resuelto' => const Color(0xFF2E7D32),
+  'pendiente' => const Color(0xFFB45309),
+  'en_proceso' => const Color(0xFF1D4ED8),
+  'resuelto' => const Color(0xFF15803D),
+  'rechazado' => const Color(0xFFB91C1C),
   _ => const Color(0xFF757575),
 };
 

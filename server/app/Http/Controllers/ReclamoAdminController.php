@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ReclamoAdminDetalleResource;
 use App\Http\Resources\ReclamoAdminResource;
 use App\Models\Reclamo;
 use Illuminate\Database\Eloquent\Builder;
@@ -55,5 +56,18 @@ class ReclamoAdminController extends Controller
 
         return ReclamoAdminResource::collection($reclamos)
             ->additional(['meta' => ['total' => $total]]);
+    }
+
+    public function show(Reclamo $reclamo): ReclamoAdminDetalleResource
+    {
+        $reclamo->load([
+            'tipoReclamo', 'estado', 'usuario', 'fotos', 'responsable',
+            'asignadoPor', 'ultimoResponsable', 'desasignadoPor',
+            'historialEstados' => fn ($query) => $query
+                ->with(['estado', 'usuario'])
+                ->orderBy('created_at')->orderBy('id'),
+        ]);
+
+        return new ReclamoAdminDetalleResource($reclamo);
     }
 }
