@@ -168,6 +168,35 @@ class ApiClient {
     return ReclamoDetalleAdmin.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  /// Reclamos propios o disponibles para el personal operativo.
+  Future<PaginaReclamosAdmin> listarTrabajo({
+    required String vista,
+    String? cursor,
+  }) async {
+    final parametros = <String, Object>{'vista': vista};
+    if (cursor != null) parametros['cursor'] = cursor;
+    final json = await _get('/api/trabajo/reclamos', parametros: parametros);
+    final data = json['data'] as List? ?? const [];
+    final meta = json['meta'] as Map<String, dynamic>? ?? const {};
+    return PaginaReclamosAdmin(
+      reclamos: data
+          .whereType<Map<String, dynamic>>()
+          .map(ReclamoAdmin.fromJson)
+          .toList(growable: false),
+      total: (meta['total'] as num?)?.toInt() ?? data.length,
+      proximoCursor: meta['next_cursor'] as String?,
+    );
+  }
+
+  Future<ReclamoDetalleAdmin> obtenerReclamoTrabajo(int id) async {
+    final json = await _get('/api/trabajo/reclamos/$id');
+    return ReclamoDetalleAdmin.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> comenzarReclamo(int id) async {
+    await _post('/api/reclamos/$id/comenzar', {});
+  }
+
   Future<void> asignarReclamo(int id, int responsableId) async {
     await _post('/api/reclamos/$id/asignacion', {
       'responsable_id': responsableId,

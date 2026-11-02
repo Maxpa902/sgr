@@ -4,6 +4,7 @@ use App\Http\Controllers\VotoController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoAdminController;
 use App\Http\Controllers\ReclamoTrabajoController;
+use App\Http\Controllers\ReclamoTrabajoListadoController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\SesionController;
 use App\Http\Controllers\TipoReclamoController;
@@ -36,6 +37,8 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
 
     Route::middleware('rol:admin,empleado')->group(function (): void {
+        Route::get('/trabajo/reclamos', [ReclamoTrabajoListadoController::class, 'index'])->name('trabajo.reclamos.index');
+        Route::get('/trabajo/reclamos/{reclamo}', [ReclamoTrabajoListadoController::class, 'show'])->name('trabajo.reclamos.show');
         Route::get('/reclamos/{reclamo}/trabajo', [ReclamoTrabajoController::class, 'show'])->name('reclamos.trabajo');
         Route::post('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'asignar'])->name('reclamos.asignar');
         Route::post('/reclamos/{reclamo}/comenzar', [ReclamoTrabajoController::class, 'comenzar'])->name('reclamos.comenzar');

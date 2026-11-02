@@ -10,6 +10,9 @@ class ReclamoAdmin {
     required this.creadoEn,
     this.descripcion,
     this.direccion,
+    this.latitud,
+    this.longitud,
+    this.tipoIcono,
   });
 
   factory ReclamoAdmin.fromJson(Map<String, dynamic> json) => ReclamoAdmin(
@@ -22,6 +25,9 @@ class ReclamoAdmin {
     creador: json['creador'] as String? ?? '',
     emailCreador: json['email_creador'] as String? ?? '',
     creadoEn: DateTime.parse(json['creado_en'] as String),
+    latitud: (json['latitud'] as num?)?.toDouble(),
+    longitud: (json['longitud'] as num?)?.toDouble(),
+    tipoIcono: json['tipo_icono'] as String?,
   );
 
   final int id;
@@ -33,4 +39,7 @@ class ReclamoAdmin {
   final String creador;
   final String emailCreador;
   final DateTime creadoEn;
+  final double? latitud;
+  final double? longitud;
+  final String? tipoIcono;
 }

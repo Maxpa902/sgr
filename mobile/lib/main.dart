@@ -7,6 +7,7 @@ import 'pantallas/cargando_page.dart';
 import 'pantallas/login_page.dart';
 import 'pantallas/panel_interno_page.dart';
 import 'pantallas/mapa_page.dart';
+import 'pantallas/operario_page.dart';
 import 'pantallas/sin_conexion_page.dart';
 import 'sesion/almacen_token.dart';
 import 'sesion/sesion.dart';
@@ -63,8 +64,12 @@ class SgrApp extends StatelessWidget {
   Widget _inicioDeSesion(Sesion sesion) {
     final usuario = sesion.usuario!;
 
-    if (usuario.esAdmin || usuario.esOperario) {
+    if (usuario.esAdmin) {
       return PanelInternoPage(sesion: sesion);
+    }
+
+    if (usuario.esOperario) {
+      return OperarioPage(sesion: sesion, mostrarMapaBase: mostrarMapaBase);
     }
 
     return PantallaPrincipal(sesion: sesion, mostrarMapaBase: mostrarMapaBase);

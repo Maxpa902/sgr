@@ -36,6 +36,8 @@ La asignación es independiente del estado: un reclamo asignado sigue `pendiente
 
 La API de personal usa `POST /api/reclamos/{id}/asignacion` con `responsable_id` para tomar o asignar, `POST /api/reclamos/{id}/comenzar` para iniciar y `GET /api/reclamos/{id}/trabajo` para consultar la asignación. El admin puede quitar la asignación de un reclamo pendiente con `DELETE /api/reclamos/{id}/asignacion`. Para rechazar un reclamo pendiente o en proceso usa `POST /api/reclamos/{id}/rechazar` con `observacion` obligatoria y `es_falso` booleano obligatorio. El rechazo registra la observación pública y aplica la sanción si corresponde. Las operaciones de escritura devuelven conflicto si el reclamo ya no cumple las condiciones.
 
+El personal consulta `GET /api/trabajo/reclamos?vista=asignados` para sus reclamos activos y `vista=disponibles` para los pendientes sin responsable. El resultado usa paginación por cursor; el mapa debe recorrer todas las páginas para no omitir reclamos. `GET /api/trabajo/reclamos/{id}` devuelve el detalle y el historial para el personal autenticado. Ambos accesos requieren rol de empleado o admin y cuenta activa.
+
 ## Baja lógica
 
 La baja lógica no es un estado. Solo se permite bajo las [condiciones de eliminación del vecino](reglas-sistema.md#edición-y-eliminación-de-reclamos). Un reclamo con `deleted_at` deja de contar como activo, no admite transiciones ni nuevas interacciones y conserva sus datos para consulta administrativa. No se contempla restauración en el MVP.
