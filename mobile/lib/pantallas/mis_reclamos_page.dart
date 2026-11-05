@@ -5,6 +5,7 @@ import '../mapa/estilos.dart';
 import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../sesion/sesion.dart';
+import '../widgets/deslizar_para_actualizar.dart';
 
 class MisReclamosPage extends StatefulWidget {
   const MisReclamosPage({super.key, required this.sesion});
@@ -30,6 +31,15 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
 
   void _reintentar() {
     setState(_cargar);
+  }
+
+  Future<void> _actualizar() async {
+    _reintentar();
+    try {
+      await _reclamosFuture;
+    } catch (_) {
+      // FutureBuilder muestra el error y ofrece reintentar.
+    }
   }
 
   void _mostrarDetalle(ReclamoMapa reclamo) {
@@ -93,8 +103,11 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline,
-                            size: 48, color: colorScheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: colorScheme.error,
+                        ),
                         const SizedBox(height: 12),
                         Text(mensaje, textAlign: TextAlign.center),
                         const SizedBox(height: 16),
@@ -113,11 +126,15 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
               final miUsuarioId = widget.sesion.usuario?.id;
 
               final misCreados = reclamos
-                  .where((r) => miUsuarioId != null && r.usuarioId == miUsuarioId)
+                  .where(
+                    (r) => miUsuarioId != null && r.usuarioId == miUsuarioId,
+                  )
                   .toList();
 
               final suscritos = reclamos
-                  .where((r) => miUsuarioId == null || r.usuarioId != miUsuarioId)
+                  .where(
+                    (r) => miUsuarioId == null || r.usuarioId != miUsuarioId,
+                  )
                   .toList();
 
               return TabBarView(
@@ -126,7 +143,7 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
                     reclamos: misCreados,
                     mensajeVacio: 'Todavía no cargaste ningún reclamo.',
                     iconoVacio: Icons.assignment_outlined,
-                    onRefresh: _reintentar,
+                    onRefresh: _actualizar,
                     alTocar: _mostrarDetalle,
                     esSuscritos: false,
                   ),
@@ -135,7 +152,7 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
                     mensajeVacio:
                         'No estás suscrito ni votaste reclamos de otros vecinos.',
                     iconoVacio: Icons.how_to_vote_outlined,
-                    onRefresh: _reintentar,
+                    onRefresh: _actualizar,
                     alTocar: _mostrarDetalle,
                     esSuscritos: true,
                   ),
@@ -162,7 +179,7 @@ class _ListaReclamosTab extends StatelessWidget {
   final List<ReclamoMapa> reclamos;
   final String mensajeVacio;
   final IconData iconoVacio;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final ValueChanged<ReclamoMapa> alTocar;
   final bool esSuscritos;
 
@@ -171,24 +188,40 @@ class _ListaReclamosTab extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (reclamos.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(iconoVacio, size: 48, color: colorScheme.onSurfaceVariant),
-              const SizedBox(height: 12),
-              Text(mensajeVacio, textAlign: TextAlign.center),
-            ],
-          ),
+      return DeslizarParaActualizar(
+        alActualizar: onRefresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        iconoVacio,
+                        size: 48,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(mensajeVacio, textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
+    return DeslizarParaActualizar(
+      alActualizar: onRefresh,
       child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: reclamos.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),

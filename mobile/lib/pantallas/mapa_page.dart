@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:forui/forui.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -14,12 +15,13 @@ import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
 import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
 import '../widgets/mensaje_error.dart';
 import 'crear_reclamo_page.dart';
 import 'cuenta_page.dart';
 import 'mis_reclamos_page.dart';
 
-/// Contenedor principal con NavigationBar inferior.
+/// Contenedor principal con navegación inferior.
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({
     super.key,
@@ -40,42 +42,42 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _indiceActual,
-        children: [
-          MapaPage(
-            sesion: widget.sesion,
-            mostrarMapaBase: widget.mostrarMapaBase,
-          ),
-          MisReclamosPage(
-            key: ValueKey('mis-reclamos-$_contadorMisReclamos'),
-            sesion: widget.sesion,
-          ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _indiceActual,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _indiceActual = index;
-            if (index == 1) {
-              _contadorMisReclamos++;
-            }
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Mapa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
-            label: 'Mis Reclamos',
-          ),
-        ],
+    return TemaApp(
+      child: Scaffold(
+        body: IndexedStack(
+          index: _indiceActual,
+          children: [
+            MapaPage(
+              sesion: widget.sesion,
+              mostrarMapaBase: widget.mostrarMapaBase,
+            ),
+            MisReclamosPage(
+              key: ValueKey('mis-reclamos-$_contadorMisReclamos'),
+              sesion: widget.sesion,
+            ),
+          ],
+        ),
+        bottomNavigationBar: BarraNavegacionPrincipal(
+          destinos: const [
+            DestinoNavegacion(
+              id: 'mapa',
+              etiqueta: 'Mapa',
+              icono: Icons.map_outlined,
+            ),
+            DestinoNavegacion(
+              id: 'reclamos',
+              etiqueta: 'Mis reclamos',
+              icono: Icons.assignment_outlined,
+            ),
+          ],
+          destinoActual: _indiceActual == 0 ? 'mapa' : 'reclamos',
+          alSeleccionar: (id) {
+            setState(() {
+              _indiceActual = id == 'mapa' ? 0 : 1;
+              if (_indiceActual == 1) _contadorMisReclamos++;
+            });
+          },
+        ),
       ),
     );
   }
@@ -246,82 +248,89 @@ class _MapaPageState extends State<MapaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reclamos'),
-        actions: [
-          IconButton(
-            onPressed: _cargando ? null : _cargarReclamos,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar',
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Mi cuenta',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => TemaApp(child: CuentaPage(sesion: widget.sesion)),
+      body: TemaApp(
+        child: LayoutPagina(
+          titulo: 'Reclamos',
+          superficie: SuperficiePagina.bordeABorde,
+          accionesEncabezado: [
+            FHeaderAction(
+              onPress: _cargando ? null : _cargarReclamos,
+              icon: const Icon(Icons.refresh),
+              semanticsTooltip: 'Actualizar',
+            ),
+            FHeaderAction(
+              icon: const Icon(Icons.account_circle_outlined),
+              semanticsTooltip: 'Mi cuenta',
+              onPress: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      TemaApp(child: CuentaPage(sesion: widget.sesion)),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          _construirMapa(),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_cargando) const LinearProgressIndicator(),
-                BarraFiltros(
-                  estados: _estados,
-                  tipos: _tipos,
-                  tiposElegidos: _tiposElegidos,
-                  desplegado: _filtrosDesplegados,
-                  alAlternarDesplegado: () {
-                    setState(() => _filtrosDesplegados = !_filtrosDesplegados);
-                  },
-                  alCambiarEstado: _cambiarEstado,
-                  alCambiarTipo: _cambiarTipo,
-                  alSeleccionarTodosLosEstados: _seleccionarTodosLosEstados,
-                  alSeleccionarTodasLasCategorias: _seleccionarTodasLasCategorias,
-                ),
-                if (_error case final error?)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        MensajeError(error),
-                        const SizedBox(height: 8),
-                        FilledButton.tonalIcon(
-                          onPressed: _cargarReclamos,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
-                        ),
-                      ],
+          ],
+          contenido: Stack(
+            children: [
+              _construirMapa(),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_cargando) const LinearProgressIndicator(),
+                    BarraFiltros(
+                      estados: _estados,
+                      tipos: _tipos,
+                      tiposElegidos: _tiposElegidos,
+                      desplegado: _filtrosDesplegados,
+                      alAlternarDesplegado: () {
+                        setState(
+                          () => _filtrosDesplegados = !_filtrosDesplegados,
+                        );
+                      },
+                      alCambiarEstado: _cambiarEstado,
+                      alCambiarTipo: _cambiarTipo,
+                      alSeleccionarTodosLosEstados: _seleccionarTodosLosEstados,
+                      alSeleccionarTodasLasCategorias:
+                          _seleccionarTodasLasCategorias,
                     ),
-                  )
-                else if (!_cargando && _reclamos.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'No hay reclamos con estos filtros.',
-                          textAlign: TextAlign.center,
+                    if (_error case final error?)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            MensajeError(error),
+                            const SizedBox(height: 8),
+                            FilledButton.tonalIcon(
+                              onPressed: _cargarReclamos,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Reintentar'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (!_cargando && _reclamos.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'No hay reclamos con estos filtros.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,

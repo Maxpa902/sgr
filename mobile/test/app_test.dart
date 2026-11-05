@@ -61,6 +61,38 @@ void main() {
     expect(find.text('Ingresar'), findsOneWidget);
   });
 
+  testWidgets('el vecino navega y actualiza sus reclamos vacíos', (tester) async {
+    var pedidosMisReclamos = 0;
+    final sesion = sesionDePrueba(
+      servidorConRutas({
+        '/api/usuario': (_) async => respuestaJson({'data': usuarioJson()}, 200),
+        '/api/tipos-reclamo': (_) async => respuestaJson({'data': []}, 200),
+        '/api/reclamos': (pedido) async {
+          if (pedido.url.queryParameters['mis_reclamos'] == '1') {
+            pedidosMisReclamos++;
+          }
+          return respuestaJson({'data': []}, 200);
+        },
+      }),
+      almacen: AlmacenTokenEnMemoria('1|abc'),
+    );
+    await sesion.restaurar();
+    await tester.pumpWidget(SgrApp(sesion: sesion, mostrarMapaBase: false));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('reclamos')));
+    await tester.pumpAndSettle();
+    expect(find.text('Todavía no cargaste ningún reclamo.'), findsOneWidget);
+    final anteriores = pedidosMisReclamos;
+    await tester.drag(find.byType(CustomScrollView).first, const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(pedidosMisReclamos, anteriores + 1);
+
+    await tester.tap(find.byKey(const ValueKey('mapa')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MapaPage), findsOneWidget);
+  });
+
   testWidgets('offers to retry when the server does not answer', (
     tester,
   ) async {
