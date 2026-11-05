@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -52,7 +53,7 @@ void main() {
     await tester.pumpWidget(SgrApp(sesion: sesion, mostrarMapaBase: false));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Mi cuenta'));
+    await tester.tap(find.byIcon(Icons.account_circle_outlined));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();

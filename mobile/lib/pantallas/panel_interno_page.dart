@@ -4,6 +4,7 @@ import 'package:forui/forui.dart';
 import '../sesion/sesion.dart';
 import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
+import 'cuenta_page.dart';
 import 'reclamos_admin_page.dart';
 import 'usuarios_page.dart';
 
@@ -121,11 +122,10 @@ class _VistaAdmin extends StatelessWidget {
       accionesEncabezado: [
         FHeaderAction(
           icon: const Icon(Icons.account_circle_outlined),
-          semanticsTooltip: 'Cuenta',
+          semanticsTooltip: 'Mi cuenta',
           onPress: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) =>
-                  TemaApp(child: _CuentaAdminPage(sesion: sesion)),
+              builder: (_) => TemaApp(child: CuentaPage(sesion: sesion)),
             ),
           ),
         ),
@@ -153,8 +153,7 @@ class _VistaAdmin extends StatelessWidget {
               semanticsLabel: 'Cuentas',
               onPress: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      TemaApp(child: UsuariosPage(sesion: sesion)),
+                  builder: (_) => TemaApp(child: UsuariosPage(sesion: sesion)),
                 ),
               ),
               child: Padding(
@@ -243,70 +242,6 @@ class _VistaAdmin extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CuentaAdminPage extends StatelessWidget {
-  const _CuentaAdminPage({required this.sesion});
-
-  final Sesion sesion;
-
-  @override
-  Widget build(BuildContext context) {
-    final usuario = sesion.usuario!;
-    return LayoutPagina(
-      titulo: 'Cuenta',
-      alVolver: () => Navigator.of(context).pop(),
-      superficie: SuperficiePagina.bordeABorde,
-      contenido: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FCard(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.account_circle_outlined,
-                      size: 52,
-                      color: context.theme.colors.mutedForeground,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${usuario.nombre} ${usuario.apellido}'.trim(),
-                      style: Theme.of(context).textTheme.titleLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      usuario.email,
-                      style: TextStyle(
-                        color: context.theme.colors.mutedForeground,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const Spacer(),
-            FButton(
-              variant: .destructive,
-              prefix: const Icon(Icons.logout),
-              onPress: () async {
-                await sesion.cerrarSesion();
-                if (context.mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              },
-              child: const Text('Cerrar sesión'),
-            ),
-          ],
-        ),
       ),
     );
   }

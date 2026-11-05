@@ -18,6 +18,7 @@ import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import '../widgets/contenido_detalle_reclamo.dart';
 import '../widgets/deslizar_para_actualizar.dart';
+import 'cuenta_page.dart';
 import 'prueba_componentes_page.dart';
 
 /// Inicio del personal: trabajo asignado, reclamos disponibles y mapa.
@@ -123,9 +124,14 @@ class _OperarioPageState extends State<OperarioPage> {
             : SuperficiePagina.contenido,
         accionesEncabezado: [
           FHeaderAction(
-            icon: const Icon(Icons.logout),
-            semanticsTooltip: 'Cerrar sesión',
-            onPress: () => widget.sesion.cerrarSesion(),
+            icon: const Icon(Icons.account_circle_outlined),
+            semanticsTooltip: 'Mi cuenta',
+            onPress: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    TemaApp(child: CuentaPage(sesion: widget.sesion)),
+              ),
+            ),
           ),
         ],
         pie: BarraNavegacionPrincipal(

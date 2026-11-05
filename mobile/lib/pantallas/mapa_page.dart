@@ -13,8 +13,10 @@ import '../modelos/reclamo_mapa.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
+import '../tema/tema_app.dart';
 import '../widgets/mensaje_error.dart';
 import 'crear_reclamo_page.dart';
+import 'cuenta_page.dart';
 import 'mis_reclamos_page.dart';
 
 /// Contenedor principal con NavigationBar inferior.
@@ -252,7 +254,15 @@ class _MapaPageState extends State<MapaPage> {
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualizar',
           ),
-          _MenuDeCuenta(sesion: widget.sesion),
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Mi cuenta',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => TemaApp(child: CuentaPage(sesion: widget.sesion)),
+              ),
+            ),
+          ),
         ],
       ),
       body: Stack(
@@ -414,41 +424,6 @@ class _MapaPageState extends State<MapaPage> {
         const SimpleAttributionWidget(
           source: Text('© OpenStreetMap'),
           alignment: Alignment.bottomLeft,
-        ),
-      ],
-    );
-  }
-}
-
-class _MenuDeCuenta extends StatelessWidget {
-  const _MenuDeCuenta({required this.sesion});
-
-  final Sesion sesion;
-
-  @override
-  Widget build(BuildContext context) {
-    final usuario = sesion.usuario;
-
-    return PopupMenuButton<void>(
-      icon: const Icon(Icons.account_circle),
-      tooltip: 'Mi cuenta',
-      itemBuilder: (_) => [
-        if (usuario != null)
-          PopupMenuItem<void>(
-            enabled: false,
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('${usuario.nombre} ${usuario.apellido}'),
-              subtitle: Text(usuario.rolParaMostrar),
-            ),
-          ),
-        PopupMenuItem<void>(
-          onTap: sesion.cerrarSesion,
-          child: const ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.logout),
-            title: Text('Cerrar sesión'),
-          ),
         ),
       ],
     );
