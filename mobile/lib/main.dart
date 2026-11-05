@@ -44,8 +44,10 @@ class SgrApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176B5B)),
         useMaterial3: true,
       ),
-      builder: (context, child) =>
-          FTheme(data: FTheme.neutral.light.touch, child: child!),
+      builder: (context, child) => FTheme(
+        data: FTheme.neutral.light.touch,
+        child: FToaster(child: child!),
+      ),
       // Cada vez que la sesión avisa un cambio, se vuelve a elegir la pantalla.
       home: ListenableBuilder(
         listenable: sesion,
