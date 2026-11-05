@@ -14,8 +14,9 @@ import '../modelos/reclamo_admin.dart';
 import '../modelos/reclamo_detalle_admin.dart';
 import '../sesion/sesion.dart';
 import '../tema/colores.dart';
-import '../tema/tema_operario.dart';
+import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
+import '../widgets/contenido_detalle_reclamo.dart';
 import '../widgets/deslizar_para_actualizar.dart';
 import 'prueba_componentes_page.dart';
 
@@ -44,7 +45,7 @@ class _OperarioPageState extends State<OperarioPage> {
   Future<void> _abrir(ReclamoAdmin reclamo) async {
     final cambio = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => TemaOperario(
+        builder: (_) => TemaApp(
           child: _DetalleTrabajo(
             sesion: widget.sesion,
             id: reclamo.id,
@@ -112,7 +113,7 @@ class _OperarioPageState extends State<OperarioPage> {
       ),
     };
 
-    return TemaOperario(
+    return TemaApp(
       child: LayoutPagina(
         titulo: destinos[_seccion].etiqueta,
         superficie: _seccion == 1
@@ -445,7 +446,8 @@ class _MapaTrabajoState extends State<_MapaTrabajo> {
                   children: [
                     if (widget.mostrarMapaBase)
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'ar.sgr.reclamos',
                         errorTileCallback: (_, _, _) {
                           if (_errorMapa) return;
@@ -468,9 +470,13 @@ class _MapaTrabajoState extends State<_MapaTrabajo> {
                             BurbujaDeReclamos(cantidad: marcadores.length),
                         markers: [
                           for (final reclamo in reclamos)
-                            if (reclamo.latitud != null && reclamo.longitud != null)
+                            if (reclamo.latitud != null &&
+                                reclamo.longitud != null)
                               Marker(
-                                point: LatLng(reclamo.latitud!, reclamo.longitud!),
+                                point: LatLng(
+                                  reclamo.latitud!,
+                                  reclamo.longitud!,
+                                ),
                                 width: 48,
                                 height: 48,
                                 child: FTappable(
@@ -596,127 +602,6 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
     _futuro = widget.sesion.api.obtenerReclamoTrabajo(widget.id);
   }
 
-  void _abrirUbicacion(ReclamoDetalleAdmin reclamo) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => TemaOperario(
-          child: _UbicacionTrabajo(
-            titulo: reclamo.titulo,
-            punto: LatLng(reclamo.latitud, reclamo.longitud),
-            mostrarMapaBase: widget.mostrarMapaBase,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _fecha(DateTime fecha, {bool conHora = false}) {
-    final local = fecha.toLocal();
-    final formato = MaterialLocalizations.of(context);
-    const meses = [
-      'ene',
-      'feb',
-      'mar',
-      'abr',
-      'may',
-      'jun',
-      'jul',
-      'ago',
-      'sep',
-      'oct',
-      'nov',
-      'dic',
-    ];
-    final dia = '${local.day} ${meses[local.month - 1]} ${local.year}';
-    if (!conHora) return dia;
-    final hora = formato.formatTimeOfDay(
-      TimeOfDay.fromDateTime(local),
-      alwaysUse24HourFormat: true,
-    );
-    return '$dia · $hora';
-  }
-
-  Widget _tituloSeccion(String titulo) => Text(
-    titulo,
-    style: context.theme.typography.body.md.copyWith(
-      fontWeight: FontWeight.w600,
-    ),
-  );
-
-  Widget _separadorSeccion() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 24),
-    child: Divider(height: 1, color: context.theme.colors.border),
-  );
-
-  Widget _eventoActividad(
-    EventoEstadoReclamo evento, {
-    required bool ultimo,
-    required ResponsableReclamo? responsable,
-  }) => Stack(
-    children: [
-      if (!ultimo)
-        Positioned(
-          left: 5,
-          top: 14,
-          bottom: 0,
-          child: ExcludeSemantics(
-            child: ColoredBox(
-              color: context.theme.colors.border,
-              child: const SizedBox(width: 2),
-            ),
-          ),
-        ),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ExcludeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.theme.colors.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: ultimo ? 0 : 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    nombreDelEstado(evento.estado),
-                    style: context.theme.typography.body.md.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_fecha(evento.creadoEn, conHora: true)}'
-                    '${evento.autor != null && evento.autor!.id == responsable?.id ? ' · ${evento.autor!.nombreCompleto}' : ''}'
-                    '${evento.visibilidad == 'interna' ? ' · Interna' : ''}',
-                    style: context.theme.typography.body.sm.copyWith(
-                      color: context.theme.colors.mutedForeground,
-                    ),
-                  ),
-                  if (evento.observacion?.trim().isNotEmpty == true) ...[
-                    const SizedBox(height: 4),
-                    Text(evento.observacion!),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    ],
-  );
-
   Future<void> _accion({required bool tomar}) async {
     if (_guardando) return;
     setState(() {
@@ -764,6 +649,7 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
     child: LayoutPagina(
       titulo: 'Reclamo #${widget.id}',
       alVolver: () => Navigator.of(context).pop(_cambio),
+      superficie: SuperficiePagina.bordeABorde,
       contenido: FutureBuilder<ReclamoDetalleAdmin>(
         future: _futuro,
         builder: (context, snapshot) {
@@ -798,285 +684,47 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
               : responsable != null
               ? 'Responsable: ${responsable.nombreCompleto}'
               : 'Sin responsable';
-          final ubicacionValida =
-              reclamo.latitud.isFinite &&
-              reclamo.longitud.isFinite &&
-              reclamo.latitud.abs() <= 90 &&
-              reclamo.longitud.abs() <= 180;
-          final eventos = reclamo.historial?.reversed.toList();
-          return ListView(
-            // El encabezado ya resuelve el área segura superior.
-            padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              Text(
-                reclamo.titulo,
-                style: context.theme.typography.display.xl.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                reclamo.tipo.nombre,
-                style: TextStyle(color: context.theme.colors.mutedForeground),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  EstadoReclamoBadge(estado: reclamo.estado),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(asignacion)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Creado el ${_fecha(reclamo.creadoEn)}',
-                style: context.theme.typography.body.sm.copyWith(
-                  color: context.theme.colors.mutedForeground,
-                ),
-              ),
-              if (puedeTomar || puedeComenzar) ...[
-                const SizedBox(height: 16),
-                FButton(
-                  onPress: _guardando ? null : () => _accion(tomar: puedeTomar),
-                  child: Text(
-                    _guardando
-                        ? 'Guardando…'
-                        : (puedeTomar ? 'Tomar reclamo' : 'Comenzar trabajo'),
+          return ContenidoDetalleReclamo(
+            reclamo: reclamo,
+            mostrarMapaBase: widget.mostrarMapaBase,
+            responsableTexto: asignacion,
+            accionesOperario: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (puedeTomar || puedeComenzar)
+                  FButton(
+                    onPress: _guardando
+                        ? null
+                        : () => _accion(tomar: puedeTomar),
+                    child: Text(
+                      _guardando
+                          ? 'Guardando…'
+                          : (puedeTomar ? 'Tomar reclamo' : 'Comenzar trabajo'),
+                    ),
                   ),
-                ),
-              ],
-              if (reclamo.estado == 'en_proceso' && mio) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Finalizar trabajo estará disponible próximamente.',
-                  style: TextStyle(color: context.theme.colors.mutedForeground),
-                ),
-              ],
-              if (_errorAccion != null) ...[
-                const SizedBox(height: 12),
-                AvisoEnLinea(
-                  tipo: TipoAviso.error,
-                  mensaje: _errorAccion!,
-                  accion: AccionAviso(
-                    etiqueta: 'Actualizar reclamo',
-                    alActivar: () => setState(_cargar),
-                  ),
-                ),
-              ],
-              _separadorSeccion(),
-              _tituloSeccion('Ubicación'),
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.location_on_outlined,
-                      size: 20,
+                if (reclamo.estado == 'en_proceso' && mio)
+                  Text(
+                    'Finalizar trabajo estará disponible próximamente.',
+                    style: TextStyle(
                       color: context.theme.colors.mutedForeground,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      reclamo.direccion?.isNotEmpty == true
-                          ? reclamo.direccion!
-                          : ubicacionValida
-                          ? 'Ubicación marcada en el mapa'
-                          : 'Ubicación no disponible',
+                if (_errorAccion != null) ...[
+                  const SizedBox(height: 12),
+                  AvisoEnLinea(
+                    tipo: TipoAviso.error,
+                    mensaje: _errorAccion!,
+                    accion: AccionAviso(
+                      etiqueta: 'Actualizar reclamo',
+                      alActivar: () => setState(_cargar),
                     ),
                   ),
                 ],
-              ),
-              if (ubicacionValida) ...[
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FButton(
-                    variant: .outline,
-                    mainAxisSize: .min,
-                    size: .lg,
-                    onPress: () => _abrirUbicacion(reclamo),
-                    child: const Text('Ver en el mapa'),
-                  ),
-                ),
               ],
-              _separadorSeccion(),
-              _tituloSeccion('Descripción'),
-              const SizedBox(height: 6),
-              Text(
-                reclamo.descripcion?.isNotEmpty == true
-                    ? reclamo.descripcion!
-                    : 'Sin descripción',
-              ),
-              if (reclamo.fotos.isNotEmpty) ...[
-                _separadorSeccion(),
-                _tituloSeccion('Fotos'),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 180,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: reclamo.fotos.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) => ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        reclamo.fotos[i],
-                        width: 230,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox(
-                          width: 230,
-                          child: Icon(Icons.broken_image_outlined),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              if (reclamo.cierre case final cierre?) ...[
-                _separadorSeccion(),
-                _tituloSeccion('Cierre'),
-                const SizedBox(height: 6),
-                Text(_fecha(cierre.creadoEn, conHora: true)),
-                if (cierre.observacion?.trim().isNotEmpty == true) ...[
-                  const SizedBox(height: 6),
-                  Text(cierre.observacion!),
-                ],
-              ],
-              _separadorSeccion(),
-              _tituloSeccion('Actividad'),
-              const SizedBox(height: 12),
-              if (eventos == null)
-                const Text('El historial de cambios no está disponible.')
-              else if (eventos.isEmpty)
-                const Text('Sin cambios de estado registrados.')
-              else
-                for (var i = 0; i < eventos.length; i++)
-                  _eventoActividad(
-                    eventos[i],
-                    ultimo: i == eventos.length - 1,
-                    responsable: responsable,
-                  ),
-            ],
+            ),
           );
         },
       ),
-    ),
-  );
-}
-
-/// Mapa de consulta centrado en la ubicación del reclamo, sin modificarlo.
-class _UbicacionTrabajo extends StatefulWidget {
-  const _UbicacionTrabajo({
-    required this.titulo,
-    required this.punto,
-    required this.mostrarMapaBase,
-  });
-
-  final String titulo;
-  final LatLng punto;
-  final bool mostrarMapaBase;
-
-  @override
-  State<_UbicacionTrabajo> createState() => _UbicacionTrabajoState();
-}
-
-class _UbicacionTrabajoState extends State<_UbicacionTrabajo> {
-  bool _errorMapa = false;
-  int _revisionMapa = 0;
-
-  void _registrarErrorMapa() {
-    if (_errorMapa) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_errorMapa) setState(() => _errorMapa = true);
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  @override
-  Widget build(BuildContext context) => LayoutPagina(
-    titulo: 'Ubicación',
-    alVolver: () => Navigator.of(context).pop(),
-    superficie: SuperficiePagina.bordeABorde,
-    contenido: Stack(
-      children: [
-        FlutterMap(
-          key: ValueKey(_revisionMapa),
-          options: MapOptions(
-            initialCenter: widget.punto,
-            initialZoom: ZonaDelMapa.zoomCercano,
-            minZoom: ZonaDelMapa.zoomMinimo,
-            maxZoom: ZonaDelMapa.zoomMaximo,
-            backgroundColor: ColoresApp.fondo,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-            ),
-          ),
-          children: [
-            if (widget.mostrarMapaBase)
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'ar.sgr.reclamos',
-                errorTileCallback: (_, _, _) => _registrarErrorMapa(),
-              ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: widget.punto,
-                  width: 48,
-                  height: 48,
-                  child: Semantics(
-                    label: 'Ubicación del reclamo: ${widget.titulo}',
-                    image: true,
-                    child: const Icon(
-                      Icons.location_on,
-                      size: 44,
-                      color: ColoresApp.principal,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        if (widget.mostrarMapaBase)
-          const Align(
-            alignment: Alignment.bottomLeft,
-            child: ColoredBox(
-              color: ColoresApp.superficie,
-              child: Padding(
-                padding: EdgeInsets.all(3),
-                child: Text(
-                  '© OpenStreetMap contributors',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: ColoresApp.textoPrincipal,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        if (_errorMapa)
-          Positioned(
-            top: 12,
-            left: 16,
-            right: 16,
-            child: AvisoEnLinea(
-              tipo: TipoAviso.advertencia,
-              titulo: 'Mapa incompleto',
-              mensaje: 'No se pudieron cargar algunas partes del mapa.',
-              accion: AccionAviso(
-                etiqueta: 'Reintentar',
-                alActivar: () => setState(() {
-                  _errorMapa = false;
-                  _revisionMapa++;
-                }),
-              ),
-            ),
-          ),
-      ],
     ),
   );
 }

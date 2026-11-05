@@ -6,6 +6,7 @@ import 'package:forui/forui.dart';
 import '../api/api_exception.dart';
 import '../modelos/usuario.dart';
 import '../sesion/sesion.dart';
+import '../widgets/componentes_ui.dart';
 
 class UsuariosPage extends StatefulWidget {
   const UsuariosPage({super.key, required this.sesion});
@@ -201,15 +202,11 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FScaffold(
-      childPad: false,
-      header: FHeader.nested(
-        title: const Text('Cuentas'),
-        prefixes: [
-          FHeaderAction.back(onPress: () => Navigator.of(context).pop()),
-        ],
-      ),
-      child: SafeArea(
+    return LayoutPagina(
+      titulo: 'Cuentas',
+      alVolver: () => Navigator.of(context).pop(),
+      superficie: SuperficiePagina.bordeABorde,
+      contenido: SafeArea(
         child: Column(
           children: [
             Padding(
@@ -307,34 +304,32 @@ class _UsuariosPageState extends State<UsuariosPage> {
       return const Center(child: FCircularProgress());
     }
     if (_errorInicial != null && _usuarios.isEmpty) {
-      return _EstadoDirectorio(
-        icono: Icons.cloud_off_outlined,
+      return EstadoContenido(
+        tipo: EstadoContenidoTipo.error,
         titulo: 'No se pudo cargar',
-        detalle: _errorInicial!,
-        accion: FButton(
-          onPress: () => unawaited(_recargar()),
-          prefix: const Icon(Icons.refresh),
-          child: const Text('Reintentar'),
+        descripcion: _errorInicial!,
+        icono: Icons.cloud_off_outlined,
+        accion: AccionContenido(
+          etiqueta: 'Reintentar',
+          alActivar: () => unawaited(_recargar()),
         ),
       );
     }
     if (!_cargandoInicial && _usuarios.isEmpty) {
-      return _EstadoDirectorio(
-        icono: _hayFiltros ? Icons.search_off : Icons.people_outline,
+      return EstadoContenido(
+        tipo: _hayFiltros
+            ? EstadoContenidoTipo.sinResultados
+            : EstadoContenidoTipo.vacio,
         titulo: _hayFiltros ? 'Sin resultados' : 'No hay cuentas',
-        detalle: _hayFiltros ? 'Probá cambiar la búsqueda o los filtros.' : '',
-        accion: _hayFiltros
-            ? FButton(
-                variant: .ghost,
-                onPress: _limpiarFiltros,
-                child: const Text('Limpiar filtros'),
-              )
-            : FButton(
-                variant: .outline,
-                onPress: () => unawaited(_recargar()),
-                prefix: const Icon(Icons.refresh),
-                child: const Text('Actualizar'),
-              ),
+        descripcion: _hayFiltros
+            ? 'Probá cambiar la búsqueda o los filtros.'
+            : null,
+        accion: AccionContenido(
+          etiqueta: _hayFiltros ? 'Limpiar filtros' : 'Actualizar',
+          alActivar: _hayFiltros
+              ? _limpiarFiltros
+              : () => unawaited(_recargar()),
+        ),
       );
     }
 
@@ -435,52 +430,6 @@ class _UsuarioTile extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _EstadoDirectorio extends StatelessWidget {
-  const _EstadoDirectorio({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    required this.accion,
-  });
-
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final Widget accion;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icono, size: 40, color: context.theme.colors.mutedForeground),
-            const SizedBox(height: 16),
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-              style: textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              detalle,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyLarge?.copyWith(
-                color: context.theme.colors.mutedForeground,
-              ),
-            ),
-            const SizedBox(height: 20),
-            accion,
-          ],
-        ),
       ),
     );
   }

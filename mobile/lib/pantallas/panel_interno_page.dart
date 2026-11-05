@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../sesion/sesion.dart';
+import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
 import 'reclamos_admin_page.dart';
 import 'usuarios_page.dart';
 
@@ -15,7 +17,7 @@ class PanelInternoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final usuario = sesion.usuario!;
     if (usuario.esAdmin) {
-      return _VistaAdmin(sesion: sesion);
+      return TemaApp(child: _VistaAdmin(sesion: sesion));
     }
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -113,23 +115,22 @@ class _VistaAdmin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FScaffold(
-      childPad: false,
-      header: FHeader(
-        title: const Text('SGR'),
-        suffixes: [
-          FHeaderAction(
-            icon: const Icon(Icons.account_circle_outlined),
-            semanticsTooltip: 'Cuenta',
-            onPress: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => _CuentaAdminPage(sesion: sesion),
-              ),
+    return LayoutPagina(
+      titulo: 'SGR',
+      superficie: SuperficiePagina.bordeABorde,
+      accionesEncabezado: [
+        FHeaderAction(
+          icon: const Icon(Icons.account_circle_outlined),
+          semanticsTooltip: 'Cuenta',
+          onPress: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  TemaApp(child: _CuentaAdminPage(sesion: sesion)),
             ),
           ),
-        ],
-      ),
-      child: ListView(
+        ),
+      ],
+      contenido: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
         children: [
           Text(
@@ -152,7 +153,8 @@ class _VistaAdmin extends StatelessWidget {
               semanticsLabel: 'Cuentas',
               onPress: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => UsuariosPage(sesion: sesion),
+                  builder: (_) =>
+                      TemaApp(child: UsuariosPage(sesion: sesion)),
                 ),
               ),
               child: Padding(
@@ -199,7 +201,8 @@ class _VistaAdmin extends StatelessWidget {
               semanticsLabel: 'Reclamos',
               onPress: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => ReclamosAdminPage(sesion: sesion),
+                  builder: (_) =>
+                      TemaApp(child: ReclamosAdminPage(sesion: sesion)),
                 ),
               ),
               child: Padding(
@@ -253,15 +256,11 @@ class _CuentaAdminPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final usuario = sesion.usuario!;
-    return FScaffold(
-      childPad: false,
-      header: FHeader.nested(
-        title: const Text('Cuenta'),
-        prefixes: [
-          FHeaderAction.back(onPress: () => Navigator.of(context).pop()),
-        ],
-      ),
-      child: Padding(
+    return LayoutPagina(
+      titulo: 'Cuenta',
+      alVolver: () => Navigator.of(context).pop(),
+      superficie: SuperficiePagina.bordeABorde,
+      contenido: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

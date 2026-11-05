@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
-import '../mapa/estilos.dart';
 import '../modelos/reclamo_admin.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
+import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
 import 'detalle_reclamo_admin_page.dart';
 
 class ReclamosAdminPage extends StatefulWidget {
@@ -210,15 +211,11 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FScaffold(
-      childPad: false,
-      header: FHeader.nested(
-        title: const Text('Reclamos'),
-        prefixes: [
-          FHeaderAction.back(onPress: () => Navigator.of(context).pop()),
-        ],
-      ),
-      child: SafeArea(
+    return LayoutPagina(
+      titulo: 'Reclamos',
+      alVolver: () => Navigator.of(context).pop(),
+      superficie: SuperficiePagina.bordeABorde,
+      contenido: SafeArea(
         child: Column(
           children: [
             Padding(
@@ -309,34 +306,32 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
       return const Center(child: FCircularProgress());
     }
     if (_errorInicial != null && _reclamos.isEmpty) {
-      return _EstadoReclamos(
-        icono: Icons.cloud_off_outlined,
+      return EstadoContenido(
+        tipo: EstadoContenidoTipo.error,
         titulo: 'No se pudo cargar',
-        detalle: _errorInicial!,
-        accion: FButton(
-          onPress: () => unawaited(_recargar()),
-          prefix: const Icon(Icons.refresh),
-          child: const Text('Reintentar'),
+        descripcion: _errorInicial!,
+        icono: Icons.cloud_off_outlined,
+        accion: AccionContenido(
+          etiqueta: 'Reintentar',
+          alActivar: () => unawaited(_recargar()),
         ),
       );
     }
     if (!_cargandoInicial && _reclamos.isEmpty) {
-      return _EstadoReclamos(
-        icono: _hayFiltros ? Icons.search_off : Icons.assignment_outlined,
+      return EstadoContenido(
+        tipo: _hayFiltros
+            ? EstadoContenidoTipo.sinResultados
+            : EstadoContenidoTipo.vacio,
         titulo: _hayFiltros ? 'Sin resultados' : 'No hay reclamos',
-        detalle: _hayFiltros ? 'Probá cambiar la búsqueda o los filtros.' : '',
-        accion: _hayFiltros
-            ? FButton(
-                variant: .ghost,
-                onPress: _limpiarFiltros,
-                child: const Text('Limpiar filtros'),
-              )
-            : FButton(
-                variant: .outline,
-                onPress: () => unawaited(_recargar()),
-                prefix: const Icon(Icons.refresh),
-                child: const Text('Actualizar'),
-              ),
+        descripcion: _hayFiltros
+            ? 'Probá cambiar la búsqueda o los filtros.'
+            : null,
+        accion: AccionContenido(
+          etiqueta: _hayFiltros ? 'Limpiar filtros' : 'Actualizar',
+          alActivar: _hayFiltros
+              ? _limpiarFiltros
+              : () => unawaited(_recargar()),
+        ),
       );
     }
 
@@ -396,141 +391,34 @@ class _ReclamoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = context.theme.colors.mutedForeground;
     final fecha = reclamo.creadoEn.toLocal();
     final fechaTexto =
         '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
-    final colorEstado = colorDelEstado(reclamo.estado);
-
-    return FTappable(
-      onPress: () async {
+    return FilaReclamo(
+      titulo: reclamo.titulo,
+      estado: reclamo.estado,
+      metadatos: [
+        reclamo.tipo,
+        fechaTexto,
+        reclamo.creador,
+        reclamo.emailCreador,
+        reclamo.direccion ?? '',
+      ],
+      alAbrir: () async {
         var huboCambios = false;
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => DetalleReclamoAdminPage(
-              sesion: sesion,
-              reclamoId: reclamo.id,
-              alCambiar: () => huboCambios = true,
+            builder: (_) => TemaApp(
+              child: DetalleReclamoAdminPage(
+                sesion: sesion,
+                reclamoId: reclamo.id,
+                alCambiar: () => huboCambios = true,
+              ),
             ),
           ),
         );
         if (context.mounted && huboCambios) await alVolver();
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    reclamo.titulo,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FBadge(
-                  variant: .outline,
-                  style: .delta(
-                    decoration: .shapeDelta(
-                      color: colorEstado.withValues(alpha: 0.10),
-                    ),
-                    labelTextStyle: .delta(
-                      color: colorEstado,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: Text(_estadoParaMostrar(reclamo.estado)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${reclamo.tipo} · $fechaTexto',
-              style: TextStyle(color: muted),
-            ),
-            if (reclamo.creador.isNotEmpty ||
-                reclamo.emailCreador.isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Text(
-                [
-                  reclamo.creador,
-                  reclamo.emailCreador,
-                ].where((dato) => dato.isNotEmpty).join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: muted),
-              ),
-            ],
-            if ((reclamo.direccion ?? '').isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Text(
-                reclamo.direccion!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: muted),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
-
-  String _estadoParaMostrar(String estado) => switch (estado) {
-    'pendiente' => 'Pendiente',
-    'en_proceso' => 'En proceso',
-    'resuelto' => 'Resuelto',
-    'rechazado' => 'Rechazado',
-    _ => estado,
-  };
-}
-
-class _EstadoReclamos extends StatelessWidget {
-  const _EstadoReclamos({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    required this.accion,
-  });
-
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final Widget accion;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 40, color: context.theme.colors.mutedForeground),
-          const SizedBox(height: 16),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          if (detalle.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              detalle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.theme.colors.mutedForeground,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          accion,
-        ],
-      ),
-    ),
-  );
 }

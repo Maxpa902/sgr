@@ -4,7 +4,8 @@ import 'package:forui/forui.dart';
 import '../api/api_exception.dart';
 import '../sesion/sesion.dart';
 import '../validaciones.dart';
-import '../widgets/mensaje_error.dart';
+import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key, required this.sesion});
@@ -95,115 +96,115 @@ class _RegistroPageState extends State<RegistroPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FScaffold(
-      header: FHeader.nested(
-        title: const Text('Crear cuenta'),
-        prefixes: [
-          FHeaderAction.back(
-            onPress: _enviando ? null : () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
-      childPad: false,
-      child: SafeArea(
-        child: Center(
+    return TemaApp(
+      child: LayoutPagina(
+        titulo: 'Crear cuenta',
+        alVolver: () {
+          if (!_enviando) Navigator.of(context).pop();
+        },
+        superficie: SuperficiePagina.bordeABorde,
+        contenido: SafeArea(
+          top: false,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formulario,
-                child: AutofillGroup(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _campo(
-                        campo: 'nombre',
-                        etiqueta: 'Nombre',
-                        controlador: _nombre,
-                        icono: Icons.person_outline,
-                        autofill: AutofillHints.givenName,
-                        validador: obligatorio('Ingresá tu nombre.'),
-                      ),
-                      _campo(
-                        campo: 'apellido',
-                        etiqueta: 'Apellido',
-                        controlador: _apellido,
-                        icono: Icons.person_outline,
-                        autofill: AutofillHints.familyName,
-                        validador: obligatorio('Ingresá tu apellido.'),
-                      ),
-                      _campo(
-                        campo: 'dni',
-                        etiqueta: 'DNI',
-                        ayuda: 'Solo números, con o sin puntos',
-                        controlador: _dni,
-                        icono: Icons.badge_outlined,
-                        teclado: TextInputType.number,
-                        validador: validarDni,
-                      ),
-                      _campo(
-                        campo: 'email',
-                        etiqueta: 'Email',
-                        controlador: _email,
-                        icono: Icons.email_outlined,
-                        teclado: TextInputType.emailAddress,
-                        autofill: AutofillHints.email,
-                        validador: validarEmail,
-                      ),
-                      _campo(
-                        campo: 'telefono',
-                        etiqueta: 'Teléfono (opcional)',
-                        controlador: _telefono,
-                        icono: Icons.phone_outlined,
-                        teclado: TextInputType.phone,
-                        autofill: AutofillHints.telephoneNumber,
-                      ),
-                      _campo(
-                        campo: 'password',
-                        etiqueta: 'Contraseña',
-                        ayuda: 'Al menos 8 caracteres',
-                        controlador: _password,
-                        icono: Icons.lock_outline,
-                        oculto: true,
-                        autofill: AutofillHints.newPassword,
-                        validador: validarPasswordNueva,
-                      ),
-                      _campo(
-                        campo: 'password_confirmation',
-                        etiqueta: 'Repetir contraseña',
-                        controlador: _passwordConfirmacion,
-                        icono: Icons.lock_outline,
-                        oculto: true,
-                        ultimo: true,
-                        validador: (valor) => valor != _password.text
-                            ? 'Las contraseñas no coinciden.'
-                            : null,
-                      ),
-                      if (_error case final error?) ...[
-                        MensajeError(error),
-                        const SizedBox(height: 16),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Form(
+                  key: _formulario,
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _campo(
+                          campo: 'nombre',
+                          etiqueta: 'Nombre',
+                          controlador: _nombre,
+                          icono: Icons.person_outline,
+                          autofill: AutofillHints.givenName,
+                          validador: obligatorio('Ingresá tu nombre.'),
+                        ),
+                        _campo(
+                          campo: 'apellido',
+                          etiqueta: 'Apellido',
+                          controlador: _apellido,
+                          icono: Icons.person_outline,
+                          autofill: AutofillHints.familyName,
+                          validador: obligatorio('Ingresá tu apellido.'),
+                        ),
+                        _campo(
+                          campo: 'dni',
+                          etiqueta: 'DNI',
+                          ayuda: 'Solo números, con o sin puntos',
+                          controlador: _dni,
+                          icono: Icons.badge_outlined,
+                          teclado: TextInputType.number,
+                          validador: validarDni,
+                        ),
+                        _campo(
+                          campo: 'email',
+                          etiqueta: 'Email',
+                          controlador: _email,
+                          icono: Icons.email_outlined,
+                          teclado: TextInputType.emailAddress,
+                          autofill: AutofillHints.email,
+                          validador: validarEmail,
+                        ),
+                        _campo(
+                          campo: 'telefono',
+                          etiqueta: 'Teléfono (opcional)',
+                          controlador: _telefono,
+                          icono: Icons.phone_outlined,
+                          teclado: TextInputType.phone,
+                          autofill: AutofillHints.telephoneNumber,
+                        ),
+                        _campo(
+                          campo: 'password',
+                          etiqueta: 'Contraseña',
+                          ayuda: 'Al menos 8 caracteres',
+                          controlador: _password,
+                          icono: Icons.lock_outline,
+                          oculto: true,
+                          autofill: AutofillHints.newPassword,
+                          validador: validarPasswordNueva,
+                        ),
+                        _campo(
+                          campo: 'password_confirmation',
+                          etiqueta: 'Repetir contraseña',
+                          controlador: _passwordConfirmacion,
+                          icono: Icons.lock_outline,
+                          oculto: true,
+                          ultimo: true,
+                          validador: (valor) => valor != _password.text
+                              ? 'Las contraseñas no coinciden.'
+                              : null,
+                        ),
+                        if (_error case final error?) ...[
+                          AvisoEnLinea(tipo: TipoAviso.error, mensaje: error),
+                          const SizedBox(height: 16),
+                        ],
+                        FButton(
+                          onPress: _enviando ? null : _crearCuenta,
+                          child: _enviando
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Crear cuenta'),
+                        ),
+                        const SizedBox(height: 8),
+                        FButton(
+                          variant: .ghost,
+                          onPress: _enviando
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          child: const Text('¿Ya tenés cuenta? Iniciá sesión'),
+                        ),
                       ],
-                      FButton(
-                        onPress: _enviando ? null : _crearCuenta,
-                        child: _enviando
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Crear cuenta'),
-                      ),
-                      const SizedBox(height: 8),
-                      FButton(
-                        variant: .ghost,
-                        onPress: _enviando
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('¿Ya tenés cuenta? Iniciá sesión'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

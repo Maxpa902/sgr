@@ -4,8 +4,8 @@ import 'package:forui/forui.dart';
 import 'colores.dart';
 
 /// Tema y host de notificaciones limitados a una ruta de operario.
-class TemaOperario extends StatelessWidget {
-  const TemaOperario({super.key, required this.child});
+class TemaApp extends StatelessWidget {
+  const TemaApp({super.key, required this.child});
 
   final Widget child;
 
