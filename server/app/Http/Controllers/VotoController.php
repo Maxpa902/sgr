@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reclamo;
+use App\Models\User;
 use App\Models\Voto;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class VotoController extends Controller
 {
-    public function index(Reclamo $reclamo)
+    public function index(Reclamo $reclamo): JsonResponse
     {
         $votos = Voto::where('reclamo_id', $reclamo->id)
-            ->with('usuario:id,nombre,apellido') 
+            ->with('usuario:id,nombre,apellido')
             ->get(['id', 'usuario_id', 'valor', 'created_at']);
 
         return response()->json([
@@ -24,54 +27,52 @@ class VotoController extends Controller
                 ];
             }),
         ]);
-    }   
+    }
 
-    public function store(Request $request, Reclamo $reclamo)
+    public function store(Request $request, Reclamo $reclamo): JsonResponse
     {
         $validated = $request->validate([
             'valor' => 'required|in:confirma,desmiente',
         ]);
 
-        $usuario = $request->user();
+        return DB::transaction(function () use ($request, $reclamo, $validated): JsonResponse {
+            // Serializar con transiciones y otros votos antes de comprobar el estado.
+            $reclamo = Reclamo::whereKey($reclamo->id)->lockForUpdate()->firstOrFail();
+            $usuario = User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
 
-        // 1. Evitar que el creador vote en su propio reclamo
-        if ((int) $reclamo->usuario_id === (int) $usuario->id) {
-            return response()->json([
-                'message' => 'No podés votar en tus propios reclamos.',
-            ], 403);
-        }
-
-        // 2. Buscar si ya existía un voto previo
-        $votoExistente = Voto::where('reclamo_id', $reclamo->id)
-            ->where('usuario_id', $usuario->id)
-            ->first();
-
-        if ($votoExistente) {
-            if ($votoExistente->valor === $validated['valor']) {
-                // Si presiona el mismo botón que ya votó, borra el voto (lo cancela)
-                $votoExistente->delete();
-            } else {
-                // Si presiona la opción contraria, actualiza el valor
-                $votoExistente->valor = $validated['valor'];
-                $votoExistente->save();
+            if ($usuario->suspendido_hasta?->isFuture()) {
+                return response()->json(['message' => 'Tu cuenta está suspendida y no puede votar.'], 403);
             }
-        } else {
-            // Si no tenía voto, crea un nuevo registro
-            $voto = new Voto();
-            $voto->reclamo_id = $reclamo->id;
-            $voto->usuario_id = $usuario->id;
-            $voto->valor = $validated['valor'];
-            $voto->save();
-        }
 
-        // 3. Recalcular conteo
-        $confirmaciones = Voto::where('reclamo_id', $reclamo->id)->where('valor', 'confirma')->count();
-        $desmentidas = Voto::where('reclamo_id', $reclamo->id)->where('valor', 'desmiente')->count();
+            if ((int) $reclamo->usuario_id === (int) $usuario->id) {
+                return response()->json(['message' => 'No podés votar en tus propios reclamos.'], 403);
+            }
 
-        return response()->json([
-            'message' => 'Voto registrado correctamente',
-            'confirmaciones' => $confirmaciones,
-            'desmentidas' => $desmentidas,
-        ]);
+            if (! in_array($reclamo->estado->nombre, ['pendiente', 'en_proceso'], true)) {
+                return response()->json(['message' => 'No se puede votar en un reclamo finalizado.'], 409);
+            }
+
+            $voto = Voto::where('reclamo_id', $reclamo->id)
+                ->where('usuario_id', $usuario->id)
+                ->first();
+
+            if ($voto && $voto->valor === $validated['valor']) {
+                $voto->delete();
+            } elseif ($voto) {
+                $voto->update(['valor' => $validated['valor']]);
+            } else {
+                Voto::create([
+                    'reclamo_id' => $reclamo->id,
+                    'usuario_id' => $usuario->id,
+                    'valor' => $validated['valor'],
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Voto registrado correctamente',
+                'confirmaciones' => $reclamo->votos()->where('valor', 'confirma')->count(),
+                'desmentidas' => $reclamo->votos()->where('valor', 'desmiente')->count(),
+            ]);
+        });
     }
 }

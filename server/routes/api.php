@@ -1,8 +1,7 @@
 <?php
 
-use App\Http\Controllers\VotoController;
-use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoAdminController;
+use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoTrabajoController;
 use App\Http\Controllers\ReclamoTrabajoListadoController;
 use App\Http\Controllers\RegistroController;
@@ -10,6 +9,7 @@ use App\Http\Controllers\SesionController;
 use App\Http\Controllers\TipoReclamoController;
 use App\Http\Controllers\UsuarioActualController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\VotoController;
 use App\Http\Middleware\AsegurarCuentaActiva;
 use Illuminate\Support\Facades\Route;
 
@@ -33,8 +33,11 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::get('/usuario', [UsuarioActualController::class, 'show'])->name('usuario.show');
     Route::get('/tipos-reclamo', [TipoReclamoController::class, 'index'])->name('tipos-reclamo.index');
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
-    
+
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
+    Route::get('/reclamos/{reclamo}/votos', [VotoController::class, 'index'])->name('reclamos.votos.index');
+    Route::post('/reclamos/{reclamo}/votar', [VotoController::class, 'store'])
+        ->middleware('rol:ciudadano,empleado')->name('reclamos.votar');
 
     Route::middleware('rol:admin,empleado')->group(function (): void {
         Route::get('/trabajo/reclamos', [ReclamoTrabajoListadoController::class, 'index'])->name('trabajo.reclamos.index');
@@ -43,7 +46,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
         Route::post('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'asignar'])->name('reclamos.asignar');
         Route::post('/reclamos/{reclamo}/comenzar', [ReclamoTrabajoController::class, 'comenzar'])->name('reclamos.comenzar');
     });
-    
+
     Route::middleware('rol:admin')->group(function (): void {
         Route::delete('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'desasignar'])->name('reclamos.desasignar');
         Route::post('/reclamos/{reclamo}/rechazar', [ReclamoTrabajoController::class, 'rechazar'])->name('reclamos.rechazar');
