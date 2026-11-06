@@ -4,6 +4,9 @@ import '../api/api_exception.dart';
 import '../formato.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../sesion/sesion.dart';
+import '../tema/colores.dart';
+import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
 import 'estilos.dart';
 
 /// Panel que aparece abajo al tocar un pin, con lo principal del reclamo.
@@ -86,90 +89,21 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
   }
 
   void _mostrarListaVotantes(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
-        return FutureBuilder<List<Map<String, dynamic>>>(
-          future: widget.sesion.obtenerVotantes(widget.reclamo.id),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            final votantes = snapshot.data ?? [];
-            if (votantes.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(24.0),
-                child: Text(
-                  'Aún no hay votos registrados para este reclamo.',
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: Text(
-                      'Vecinos que votaron',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Divider(),
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: votantes.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final voto = votantes[index];
-                        final esConfirma = voto['valor'] == 'confirma';
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: esConfirma
-                                ? Colors.green.shade100
-                                : Colors.red.shade100,
-                            child: Icon(
-                              esConfirma
-                                  ? Icons.thumb_up
-                                  : Icons.thumb_down,
-                              color: esConfirma
-                                  ? Colors.green.shade700
-                                  : Colors.red.shade700,
-                              size: 18,
-                            ),
-                          ),
-                          title: Text(voto['usuario'] as String? ?? 'Usuario'),
-                          subtitle: Text(
-                            esConfirma
-                                ? 'Confirmó el reclamo'
-                                : 'Desmintió el reclamo',
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => TemaApp(
+        conNotificaciones: false,
+        child: _ListaVotantes(
+          sesion: widget.sesion,
+          reclamoId: widget.reclamo.id,
+        ),
+      ),
     );
   }
 
@@ -182,209 +116,371 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
         ? reclamo.tipo.nombre
         : '${reclamo.tipo.nombre} · ${reclamo.direccion}';
 
-    final esMiReclamoCreado = widget.sesion.usuario?.id != null &&
+    final esMiReclamoCreado =
+        widget.sesion.usuario?.id != null &&
         widget.reclamo.usuarioId == widget.sesion.usuario?.id;
 
     final estaConfirmado = _miVotoActual == 'confirma';
     final estaDesmentido = _miVotoActual == 'desmiente';
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Barrita superior de arrastre del modal
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            // AVISO EN LA PARTE SUPERIOR
-            if (_mensajeNotificacion != null) ...[
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Text(
-                  _mensajeNotificacion!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.blue.shade900,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+    return TemaApp(
+      conNotificaciones: false,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Barrita superior de arrastre del modal
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: ColoresApp.borde,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-            ],
 
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: colorEstado,
-                  foregroundColor: Colors.white,
-                  child: Icon(iconoDeCategoria(reclamo.tipo.icono)),
+              if (_mensajeNotificacion != null) ...[
+                AvisoEnLinea(
+                  tipo: TipoAviso.informacion,
+                  mensaje: _mensajeNotificacion!,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(reclamo.titulo, style: textos.titleLarge),
-                      Text(lugar, style: textos.bodyMedium),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 14),
               ],
-            ),
-            if (reclamo.descripcion != null &&
-                reclamo.descripcion!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(reclamo.descripcion!, style: textos.bodyMedium),
-            ],
-            if (reclamo.fotos.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 180,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: reclamo.fotos.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        reclamo.fotos[index],
-                        fit: BoxFit.cover,
-                        width: 240,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 140,
-                          color: Colors.grey.shade300,
-                          child: const Icon(Icons.broken_image),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(
-                  label: Text(nombreDelEstado(reclamo.estado)),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  backgroundColor: colorEstado,
-                  side: BorderSide.none,
-                ),
-                Text(
-                  'Cargado ${haceCuanto(reclamo.creadoEn)}',
-                  style: textos.bodyMedium,
-                ),
-              ],
-            ),
-            if (reclamo.destacado) ...[
-              const SizedBox(height: 12),
+
               Row(
                 children: [
-                  Icon(Icons.star, color: Colors.amber.shade700, size: 20),
-                  const SizedBox(width: 6),
-                  const Expanded(
-                    child: Text('Muchos vecinos confirmaron este reclamo.'),
+                  CircleAvatar(
+                    backgroundColor: colorEstado,
+                    foregroundColor: Colors.white,
+                    child: Icon(iconoDeCategoria(reclamo.tipo.icono)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(reclamo.titulo, style: textos.titleLarge),
+                        Text(lugar, style: textos.bodyMedium),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: (esMiReclamoCreado || _votando)
-                        ? null
-                        : () => _votar('confirma'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: estaConfirmado
-                          ? Colors.green.shade600
-                          : Colors.transparent,
-                      foregroundColor:
-                          estaConfirmado ? Colors.white : Colors.green.shade700,
-                      side: BorderSide(
-                        color: esMiReclamoCreado
-                            ? Colors.grey.shade400
-                            : Colors.green.shade600,
-                        width: 1.5,
-                      ),
-                    ),
-                    icon: Icon(
-                      estaConfirmado
-                          ? Icons.thumb_up
-                          : Icons.thumb_up_outlined,
-                    ),
-                    label: Text('Confirmar ($_confirmaciones)'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: (esMiReclamoCreado || _votando)
-                        ? null
-                        : () => _votar('desmiente'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: estaDesmentido
-                          ? Colors.red.shade600
-                          : Colors.transparent,
-                      foregroundColor:
-                          estaDesmentido ? Colors.white : Colors.red.shade700,
-                      side: BorderSide(
-                        color: esMiReclamoCreado
-                            ? Colors.grey.shade400
-                            : Colors.red.shade600,
-                        width: 1.5,
-                      ),
-                    ),
-                    icon: Icon(
-                      estaDesmentido
-                          ? Icons.thumb_down
-                          : Icons.thumb_down_outlined,
-                    ),
-                    label: Text('Desmentir ($_desmentidas)'),
+              if (reclamo.descripcion != null &&
+                  reclamo.descripcion!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(reclamo.descripcion!, style: textos.bodyMedium),
+              ],
+              if (reclamo.fotos.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 180,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: reclamo.fotos.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          reclamo.fotos[index],
+                          fit: BoxFit.cover,
+                          width: 240,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 140,
+                            color: ColoresApp.borde,
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
-            ),
-            if (_confirmaciones > 0 || _desmentidas > 0) ...[
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () => _mostrarListaVotantes(context),
-                  icon: const Icon(Icons.people_alt_outlined, size: 18),
-                  label: const Text('Ver lista de votantes'),
-                ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  EstadoReclamoBadge(estado: reclamo.estado),
+                  Text(
+                    'Cargado ${haceCuanto(reclamo.creadoEn)}',
+                    style: textos.bodyMedium,
+                  ),
+                ],
               ),
+              if (reclamo.destacado) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.amber.shade700, size: 20),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text('Muchos vecinos confirmaron este reclamo.'),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (esMiReclamoCreado || _votando)
+                          ? null
+                          : () => _votar('confirma'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: estaConfirmado
+                            ? ColoresApp.exito
+                            : Colors.transparent,
+                        foregroundColor: estaConfirmado
+                            ? Colors.white
+                            : ColoresApp.exito,
+                        side: BorderSide(
+                          color: esMiReclamoCreado
+                              ? ColoresApp.borde
+                              : ColoresApp.exito,
+                          width: 1.5,
+                        ),
+                      ),
+                      icon: Icon(
+                        estaConfirmado
+                            ? Icons.thumb_up
+                            : Icons.thumb_up_outlined,
+                      ),
+                      label: Text('Confirmar ($_confirmaciones)'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (esMiReclamoCreado || _votando)
+                          ? null
+                          : () => _votar('desmiente'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: estaDesmentido
+                            ? ColoresApp.error
+                            : Colors.transparent,
+                        foregroundColor: estaDesmentido
+                            ? Colors.white
+                            : ColoresApp.error,
+                        side: BorderSide(
+                          color: esMiReclamoCreado
+                              ? ColoresApp.borde
+                              : ColoresApp.error,
+                          width: 1.5,
+                        ),
+                      ),
+                      icon: Icon(
+                        estaDesmentido
+                            ? Icons.thumb_down
+                            : Icons.thumb_down_outlined,
+                      ),
+                      label: Text('Desmentir ($_desmentidas)'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_confirmaciones > 0 || _desmentidas > 0) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => _mostrarListaVotantes(context),
+                    icon: const Icon(Icons.people_alt_outlined, size: 18),
+                    label: const Text('Ver lista de votantes'),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _ListaVotantes extends StatefulWidget {
+  const _ListaVotantes({required this.sesion, required this.reclamoId});
+
+  final Sesion sesion;
+  final int reclamoId;
+
+  @override
+  State<_ListaVotantes> createState() => _ListaVotantesState();
+}
+
+class _ListaVotantesState extends State<_ListaVotantes> {
+  late Future<List<Map<String, dynamic>>> _votantes;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  void _cargar() {
+    _votantes = widget.sesion.obtenerVotantes(widget.reclamoId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .75,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _votantes,
+            builder: (context, snapshot) {
+              final cargando = snapshot.connectionState != ConnectionState.done;
+              final votantes = snapshot.data ?? [];
+              final confirmaciones = votantes
+                  .where((v) => v['valor'] == 'confirma')
+                  .toList();
+              final desmentidas = votantes
+                  .where((v) => v['valor'] != 'confirma')
+                  .toList();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Votos del reclamo',
+                          style: textos.titleLarge,
+                        ),
+                      ),
+                      if (!cargando && !snapshot.hasError)
+                        Text(
+                          '${votantes.length} ${votantes.length == 1 ? 'voto' : 'votos'}',
+                          style: textos.bodyMedium?.copyWith(
+                            color: ColoresApp.textoSecundario,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (cargando)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (snapshot.hasError) ...[
+                    Text(
+                      snapshot.error is ApiException
+                          ? (snapshot.error! as ApiException).mensaje
+                          : 'No se pudieron cargar los votos.',
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => setState(_cargar),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                      ),
+                    ),
+                  ] else if (votantes.isEmpty)
+                    const Text(
+                      'Aún no hay votos registrados para este reclamo.',
+                    )
+                  else
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (confirmaciones.isNotEmpty)
+                              _GrupoVotantes(
+                                titulo: 'Confirmaciones',
+                                icono: Icons.thumb_up_outlined,
+                                color: ColoresApp.exito,
+                                votantes: confirmaciones,
+                              ),
+                            if (confirmaciones.isNotEmpty &&
+                                desmentidas.isNotEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(height: 1),
+                              ),
+                            if (desmentidas.isNotEmpty)
+                              _GrupoVotantes(
+                                titulo: 'Desmentidas',
+                                icono: Icons.thumb_down_outlined,
+                                color: ColoresApp.error,
+                                votantes: desmentidas,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GrupoVotantes extends StatelessWidget {
+  const _GrupoVotantes({
+    required this.titulo,
+    required this.icono,
+    required this.color,
+    required this.votantes,
+  });
+
+  final String titulo;
+  final IconData icono;
+  final Color color;
+  final List<Map<String, dynamic>> votantes;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Icon(icono, size: 20, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$titulo · ${votantes.length}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      for (final voto in votantes)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 8, 0, 8),
+          child: Text(
+            voto['usuario'] as String? ?? 'Usuario',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+    ],
+  );
 }

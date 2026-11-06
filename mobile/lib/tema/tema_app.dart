@@ -5,9 +5,14 @@ import 'colores.dart';
 
 /// Tema y host de notificaciones limitados a una ruta de operario.
 class TemaApp extends StatelessWidget {
-  const TemaApp({super.key, required this.child});
+  const TemaApp({
+    super.key,
+    required this.child,
+    this.conNotificaciones = true,
+  });
 
   final Widget child;
+  final bool conNotificaciones;
 
   static final _temaForui = _crearTemaForui();
 
@@ -73,7 +78,7 @@ class TemaApp extends StatelessWidget {
       data: material.copyWith(colorScheme: colores),
       child: FTheme(
         data: _temaForui,
-        child: FToaster(child: child),
+        child: conNotificaciones ? FToaster(child: child) : child,
       ),
     );
   }
