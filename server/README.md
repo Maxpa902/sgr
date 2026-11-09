@@ -56,3 +56,7 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## tockens api para validacion de imagenes o fotos
+SIGHTENGINE_USER='1003919700'
+SIGHTENGINE_SECRET='cNWbZ9NDya3YdMQNLc94MkLokfAUWPuj'
