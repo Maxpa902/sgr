@@ -1,30 +1,33 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 import '../modelos/reclamo_mapa.dart';
 import 'estilos.dart';
 
 /// El pin de un reclamo: el color dice el estado y el ícono, la categoría.
-/// Cuantas más confirmaciones tiene, más grande se ve.
 class PinReclamo extends StatelessWidget {
   const PinReclamo({super.key, required this.reclamo, required this.alTocar});
 
   final ReclamoMapa reclamo;
   final VoidCallback alTocar;
 
-  /// Lugar que ocupa el pin en el mapa, contando el número de confirmaciones.
   static double espacio(ReclamoMapa reclamo) => _diametro(reclamo) + 12;
 
   static double _diametro(ReclamoMapa reclamo) {
-    if (reclamo.confirmaciones >= 10) {
+    final puntajeNeto = reclamo.confirmaciones - reclamo.desmentidas;
+
+    if (puntajeNeto >= 10) {
       return 52;
     }
-    return reclamo.destacado ? 44 : 34;
+    return puntajeNeto >= 5 ? 44 : 34;
   }
 
   @override
   Widget build(BuildContext context) {
     final diametro = _diametro(reclamo);
     final color = colorDelEstado(reclamo.estado);
+
+    final puntajeNeto = math.max(0, reclamo.confirmaciones - reclamo.desmentidas);
 
     return Semantics(
       button: true,
@@ -59,12 +62,12 @@ class PinReclamo extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (reclamo.confirmaciones > 0)
+                if (puntajeNeto > 0)
                   Positioned(
                     top: -6,
                     right: -6,
                     child: _Confirmaciones(
-                      cantidad: reclamo.confirmaciones,
+                      cantidad: puntajeNeto,
                       color: color,
                     ),
                   ),
