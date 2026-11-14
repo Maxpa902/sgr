@@ -332,6 +332,36 @@ class ContenidoDetalleReclamo extends StatelessWidget {
             ),
           ],
 
+          if (reclamo.sancionesActivasCount > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      reclamo.sancionesActivasCount >= 3
+                          ? 'Usuario suspendido por reportes falsos activos.'
+                          : 'Vecino en riesgo: ${reclamo.sancionesActivasCount} de 3 reportes falsos (a ${3-reclamo.sancionesActivasCount} de suspensión).',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 24),
           FButton(
             variant: .outline,

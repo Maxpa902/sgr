@@ -11,6 +11,7 @@ use App\Http\Controllers\UsuarioActualController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\VotoController;
 use App\Http\Middleware\AsegurarCuentaActiva;
+use App\Http\Controllers\AdminUsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/status', function () {
@@ -54,5 +55,6 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
         Route::get('/admin/reclamos', [ReclamoAdminController::class, 'index'])->name('admin.reclamos.index');
         Route::get('/admin/reclamos/{reclamo}', [ReclamoAdminController::class, 'show'])->name('admin.reclamos.show');
         Route::get('/admin/tipos-reclamo', [TipoReclamoController::class, 'adminIndex'])->name('admin.tipos-reclamo.index');
+        Route::get('/admin/usuarios-sancionados', [AdminUsuarioController::class, 'usuariosSancionados'])->name('admin.usuarios-sancionados.index');
     });
 });

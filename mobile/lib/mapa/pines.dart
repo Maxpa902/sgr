@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import '../modelos/reclamo_mapa.dart';
 import 'estilos.dart';
+import '../tema/colores.dart';
 
 /// El pin de un reclamo: el color dice el estado y el ícono, la categoría.
 class PinReclamo extends StatelessWidget {
@@ -14,25 +15,20 @@ class PinReclamo extends StatelessWidget {
   static double espacio(ReclamoMapa reclamo) => _diametro(reclamo) + 12;
 
   static double _diametro(ReclamoMapa reclamo) {
-    final puntajeNeto = reclamo.confirmaciones - reclamo.desmentidas;
-
-    if (puntajeNeto >= 10) {
-      return 52;
-    }
-    return puntajeNeto >= 5 ? 44 : 34;
+    final neto = reclamo.puntajeNeto.abs(); // Usamos el valor absoluto para el tamaño
+    if (neto >= 10) return 52;
+    return neto >= 5 ? 44 : 34;
   }
 
   @override
   Widget build(BuildContext context) {
     final diametro = _diametro(reclamo);
     final color = colorDelEstado(reclamo.estado);
-
-    final puntajeNeto = math.max(0, reclamo.confirmaciones - reclamo.desmentidas);
+    final neto = reclamo.puntajeNeto;
 
     return Semantics(
       button: true,
-      label:
-          '${reclamo.titulo}, ${nombreDelEstado(reclamo.estado).toLowerCase()}',
+      label: '${reclamo.titulo}, puntaje neto: $neto',
       child: GestureDetector(
         onTap: alTocar,
         child: Center(
@@ -62,13 +58,32 @@ class PinReclamo extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (puntajeNeto > 0)
+                // Se muestra siempre que el puntaje neto sea diferente de 0
+                if (neto != 0)
                   Positioned(
                     top: -6,
                     right: -6,
-                    child: _Confirmaciones(
-                      cantidad: puntajeNeto,
-                      color: color,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        // Si es negativo, el borde se pone rojo de alerta
+                        border: Border.all(
+                          color: neto < 0 ? ColoresApp.errorBorde : color,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                         neto > 0 ? '+$neto' : '$neto', // Muestra con '+' los positivos y el '-' automático los negativos
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: neto < 0 ? ColoresApp.errorBorde : color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
               ],

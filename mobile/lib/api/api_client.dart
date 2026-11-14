@@ -102,6 +102,16 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
+  Future<List<Usuario>> listarUsuariosConSanciones() async {
+    final json = await _get('/api/admin/usuarios-sancionados');
+    final data = json['data'] as List? ?? json as List? ?? [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(Usuario.fromJson)
+        .toList(growable: false);
+  }
+
   /// Un bloque de cuentas filtrado, ordenado por apellido y nombre.
   Future<PaginaUsuarios> listarUsuarios({
     String? busqueda,
@@ -141,12 +151,14 @@ class ApiClient {
     String? busqueda,
     String? estado,
     int? tipoId,
+    bool urgentes = false,
     String? cursor,
   }) async {
     final parametros = <String, Object>{};
     if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
     if (estado != null) parametros['estado'] = estado;
     if (tipoId != null) parametros['tipo'] = '$tipoId';
+    if (urgentes) parametros['urgentes'] = '1'; // 👈 NUEVO: Se envía al backend si está activo
     if (cursor != null) parametros['cursor'] = cursor;
 
     final json = await _get('/api/admin/reclamos', parametros: parametros);

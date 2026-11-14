@@ -143,7 +143,8 @@ class ReclamoTrabajoController extends Controller
                 if ($vigentes >= 3) {
                     $hasta = now()->addDays(30);
                     if ($usuario->suspendido_hasta === null || $usuario->suspendido_hasta->lt($hasta)) {
-                        $usuario->forceFill(['suspendido_hasta' => $hasta])->save();
+                        $usuario->suspendido_hasta = $hasta;
+                        $usuario->save();
                     }
                 }
             }

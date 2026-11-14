@@ -15,6 +15,8 @@ import '../validaciones.dart';
 import '../widgets/mensaje_error.dart';
 import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
+import '../widgets/banner_sanciones.dart';
+
 
 class CrearReclamoPage extends StatefulWidget {
   const CrearReclamoPage({
@@ -50,8 +52,13 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
 
   int _cantidadReclamosActivos = 0;
 
-  
+
   bool get _alcanzoLimiteReclamos => _cantidadReclamosActivos >= 3;
+
+  bool get _estaSuspendido {
+    final usuario = widget.sesion.usuario;
+    return usuario != null && usuario.estaSuspendido;
+  }
 
   @override
   void initState() {
@@ -80,7 +87,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
 
       final activos = misReclamos.where((r) {
         final esCreadoPorMi = r.usuarioId == miUsuarioId;
-        final estaActivo = r.estado != 'resuelto' && r.estado != 'cancelado';
+        final estaActivo = r.estado == 'pendiente' || r.estado == 'en_proceso';
         return esCreadoPorMi && estaActivo;
       }).length;
 
@@ -383,7 +390,8 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool deshabilitado = _enviando || _alcanzoLimiteReclamos;
+    final bool suspendido = _estaSuspendido;
+    final bool deshabilitado = _enviando || _alcanzoLimiteReclamos || suspendido;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nuevo Reclamo')),
@@ -397,6 +405,46 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Reemplaza las tarjetas anteriores por esto:
+                      BannerSanciones(
+                        sancionesActivas: 1, // Aquí después conectas la variable real que traiga el backend (ej: _sancionesActivas)
+                        estaSuspendido: suspendido,
+                      ),
+                      // 1. AVISO SI ESTÁ SUSPENDIDO POR SANCIONES
+                      if (suspendido) ...[
+                        Card(
+                          color: Colors.red.shade50,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: Colors.red.shade400),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.block,
+                                  color: Colors.red.shade900,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Tu cuenta está suspendida temporalmente para crear reclamos debido a reportes falsos. Podrás volver a publicar más adelante.',
+                                    style: TextStyle(
+                                      color: Colors.red.shade900,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       if (_alcanzoLimiteReclamos) ...[
                         Card(
                           color: Colors.amber.shade50,

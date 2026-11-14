@@ -66,4 +66,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Sancion::class, 'usuario_id');
     }
+    public function sancionesActivas()
+    {
+        return $this->hasMany(Sancion::class, 'usuario_id')
+            ->whereNull('revocada_en')
+            ->where('created_at', '>', now()->subDays(180));
+    }
 }
