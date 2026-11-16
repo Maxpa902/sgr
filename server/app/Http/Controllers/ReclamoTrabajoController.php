@@ -89,6 +89,31 @@ class ReclamoTrabajoController extends Controller
         return $this->respuesta($reclamo->fresh(['estado', 'responsable']));
     }
 
+    public function finalizar(Request $request, Reclamo $reclamo): JsonResponse
+    {
+        $datos = $request->validate([
+            'observacion' => ['required', 'string', 'max:5000'],
+            'visibilidad' => ['sometimes', Rule::in(['publica', 'interna'])],
+        ]);
+        $enProceso = EstadoReclamo::where('nombre', 'en_proceso')->firstOrFail();
+        $resuelto = EstadoReclamo::where('nombre', 'resuelto')->firstOrFail();
+        DB::transaction(function () use ($request, $reclamo, $datos, $enProceso, $resuelto): void {
+            $query = Reclamo::whereKey($reclamo->id)->where('estado_id', $enProceso->id);
+            if ($request->user()->rol === 'empleado') {
+                $query->where('responsable_id', $request->user()->id);
+            }
+            abort_unless($query->update(['estado_id' => $resuelto->id, 'updated_at' => now()]), 409, 'El reclamo debe estar en proceso y asignado a vos.');
+            $reclamo->historialEstados()->create([
+                'estado_id' => $resuelto->id,
+                'usuario_id' => $request->user()->id,
+                'observacion' => $datos['observacion'],
+                'visibilidad' => $datos['visibilidad'] ?? 'publica',
+                'created_at' => now(),
+            ]);
+        });
+        return $this->respuesta($reclamo->fresh(['estado', 'responsable']));
+    }
+
     public function desasignar(Request $request, Reclamo $reclamo): JsonResponse
     {
         $pendiente = EstadoReclamo::where('nombre', 'pendiente')->firstOrFail();
@@ -116,13 +141,16 @@ class ReclamoTrabajoController extends Controller
             'observacion' => ['required', 'string', 'max:5000'],
             'es_falso' => ['required', 'boolean'],
         ]);
+        abort_if($request->user()->rol === 'empleado' && ! $datos['es_falso'], 403, 'Solo podés rechazar reclamos falsos.');
         $estadosActivos = EstadoReclamo::whereIn('nombre', ['pendiente', 'en_proceso'])->pluck('id');
         $rechazado = EstadoReclamo::where('nombre', 'rechazado')->firstOrFail();
 
         DB::transaction(function () use ($request, $reclamo, $datos, $estadosActivos, $rechazado): void {
-            $actualizado = Reclamo::whereKey($reclamo->id)
-                ->whereIn('estado_id', $estadosActivos)
-                ->update(['estado_id' => $rechazado->id, 'updated_at' => now()]);
+            $query = Reclamo::whereKey($reclamo->id)->whereIn('estado_id', $estadosActivos);
+            if ($request->user()->rol === 'empleado') {
+                $query->where('responsable_id', $request->user()->id);
+            }
+            $actualizado = $query->update(['estado_id' => $rechazado->id, 'updated_at' => now()]);
             abort_unless($actualizado, 409, 'Solo se pueden rechazar reclamos pendientes o en proceso.');
 
             $reclamo->historialEstados()->create([

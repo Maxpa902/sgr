@@ -234,6 +234,10 @@ class ApiClient {
     await _post('/api/reclamos/$id/comenzar', {});
   }
 
+  Future<void> finalizarReclamo(int id, {required String observacion, required String visibilidad}) async {
+    await _post('/api/reclamos/$id/finalizar', {'observacion': observacion, 'visibilidad': visibilidad});
+  }
+
   Future<void> asignarReclamo(int id, int responsableId) async {
     await _post('/api/reclamos/$id/asignacion', {
       'responsable_id': responsableId,

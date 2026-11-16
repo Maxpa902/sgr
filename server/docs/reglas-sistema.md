@@ -65,7 +65,7 @@ Crear y editar requieren no estar suspendido.
 
 ## Sanciones
 
-- Un reclamo se marca como **falso** al rechazarlo. Puede hacerlo el admin o cualquier operario. Solo en ese caso se crea una sanción para el creador, en la misma transacción que el cambio de estado. Un rechazo por otros motivos, por ejemplo porque el problema no corresponde a la cooperativa, no sanciona y solo lo hace el admin.
+- Un reclamo se marca como **falso** al rechazarlo. Puede hacerlo el admin o el operario responsable. Solo en ese caso se crea una sanción para el creador, en la misma transacción que el cambio de estado. Un rechazo por otros motivos, por ejemplo porque el problema no corresponde a la cooperativa, no sanciona y solo lo hace el admin.
 - Una sanción está vigente si no fue revocada y tiene menos de **180 días**.
 - Al registrar una sanción, si el usuario acumula **tres o más sanciones vigentes**, queda suspendido por **30 días**: se completa `suspendido_hasta`. No se bloquea al primer error.
 - Un usuario suspendido conserva las funciones de consulta, pero no puede crear o editar reclamos, votar ni crear, editar o eliminar comentarios. La suspensión termina sola al pasar la fecha. No afecta las funciones de trabajo de un operario.
@@ -78,7 +78,7 @@ Crear y editar requieren no estar suspendido.
 - Usan la misma app móvil que los vecinos, con las vistas de trabajo habilitadas por su rol.
 - Pueden consultar todos los reclamos desde la vista de trabajo, con su historial y las observaciones internas.
 - Un operario puede tomar para sí un reclamo pendiente sin responsable. El admin puede asignar o reasignar un reclamo pendiente a un operario activo o a sí mismo. La asignación no cambia el estado; el responsable debe iniciar el trabajo para pasar a `en_proceso`. El historial registra cada transición de estado.
-- Pueden rechazar un reclamo únicamente marcándolo como falso, lo que genera una [sanción](#sanciones) para su creador. No pueden revocar sanciones.
+- Pueden rechazar un reclamo asignado a ellos únicamente marcándolo como falso, lo que genera una [sanción](#sanciones) para su creador. No pueden revocar sanciones.
 - Cuando usan las funciones de vecino (cargar reclamos, votar o comentar), se aplican las mismas reglas y límites que a cualquier vecino.
 
 ## Administradores

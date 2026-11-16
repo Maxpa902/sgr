@@ -18,6 +18,7 @@ import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import '../widgets/contenido_detalle_reclamo.dart';
 import '../widgets/deslizar_para_actualizar.dart';
+import 'acciones_reclamo_admin.dart';
 import 'cuenta_page.dart';
 import 'prueba_componentes_page.dart';
 
@@ -38,24 +39,24 @@ class OperarioPage extends StatefulWidget {
 
 class _OperarioPageState extends State<OperarioPage> {
   int _seccion = 0;
-  int _revision = 0;
+  _CambioTrabajo? _ultimoCambio;
   SuperficiePagina _superficiePrueba = SuperficiePagina.contenido;
 
-  void _cambio() => setState(() => _revision++);
-
   Future<void> _abrir(ReclamoAdmin reclamo) async {
-    final cambio = await Navigator.of(context).push<bool>(
+    final cambio = await Navigator.of(context).push<_CambioTrabajo>(
       MaterialPageRoute(
         builder: (_) => TemaApp(
           child: _DetalleTrabajo(
             sesion: widget.sesion,
-            id: reclamo.id,
+            reclamo: reclamo,
             mostrarMapaBase: widget.mostrarMapaBase,
           ),
         ),
       ),
     );
-    if (mounted && cambio == true) _cambio();
+    if (mounted && cambio != null) {
+      setState(() => _ultimoCambio = cambio);
+    }
   }
 
   @override
@@ -79,7 +80,6 @@ class _OperarioPageState extends State<OperarioPage> {
     ];
     final contenido = switch (_seccion) {
       0 => FTabs(
-        key: ValueKey('trabajo-$_revision'),
         expands: true,
         children: [
           FTabEntry(
@@ -87,6 +87,7 @@ class _OperarioPageState extends State<OperarioPage> {
             child: _ListaTrabajo(
               sesion: widget.sesion,
               vista: 'asignados',
+              cambio: _ultimoCambio,
               alAbrir: _abrir,
             ),
           ),
@@ -95,15 +96,16 @@ class _OperarioPageState extends State<OperarioPage> {
             child: _ListaTrabajo(
               sesion: widget.sesion,
               vista: 'disponibles',
+              cambio: _ultimoCambio,
               alAbrir: _abrir,
             ),
           ),
         ],
       ),
       1 => _MapaTrabajo(
-        key: ValueKey('mapa-$_revision'),
         sesion: widget.sesion,
         mostrarMapaBase: widget.mostrarMapaBase,
+        cambio: _ultimoCambio,
         alAbrir: _abrir,
       ),
       _ => PruebaComponentesPage(
@@ -151,10 +153,12 @@ class _ListaTrabajo extends StatefulWidget {
   const _ListaTrabajo({
     required this.sesion,
     required this.vista,
+    required this.cambio,
     required this.alAbrir,
   });
   final Sesion sesion;
   final String vista;
+  final _CambioTrabajo? cambio;
   final ValueChanged<ReclamoAdmin> alAbrir;
 
   @override
@@ -164,6 +168,7 @@ class _ListaTrabajo extends StatefulWidget {
 class _ListaTrabajoState extends State<_ListaTrabajo> {
   final _scroll = ScrollController();
   final List<ReclamoAdmin> _reclamos = [];
+  final Map<int, _CambioTrabajo> _cambiosLocales = {};
   String? _cursor;
   String? _error;
   bool _cargando = false;
@@ -175,6 +180,29 @@ class _ListaTrabajoState extends State<_ListaTrabajo> {
     super.initState();
     _scroll.addListener(_alDesplazarse);
     unawaited(_recargar());
+  }
+
+  @override
+  void didUpdateWidget(covariant _ListaTrabajo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final cambio = widget.cambio;
+    if (cambio == null || identical(cambio, oldWidget.cambio)) return;
+    _cambiosLocales[cambio.reclamo.id] = cambio;
+    _aplicarCambio(cambio);
+  }
+
+  void _aplicarCambio(_CambioTrabajo cambio) {
+    final indice = _reclamos.indexWhere((item) => item.id == cambio.reclamo.id);
+    final pertenece = cambio.activo && widget.vista == 'asignados';
+    _reclamos.removeWhere((item) => item.id == cambio.reclamo.id);
+    if (pertenece) {
+      final posicion = indice < 0
+          ? 0
+          : indice > _reclamos.length
+          ? _reclamos.length
+          : indice;
+      _reclamos.insert(posicion, cambio.reclamo);
+    }
   }
 
   @override
@@ -191,6 +219,7 @@ class _ListaTrabajoState extends State<_ListaTrabajo> {
 
   Future<void> _recargar() async {
     _version++;
+    _cambiosLocales.clear();
     setState(() {
       _reclamos.clear();
       _cursor = null;
@@ -213,6 +242,9 @@ class _ListaTrabajoState extends State<_ListaTrabajo> {
       if (!mounted || version != _version) return;
       setState(() {
         _reclamos.addAll(pagina.reclamos);
+        for (final cambio in _cambiosLocales.values) {
+          _aplicarCambio(cambio);
+        }
         _cursor = pagina.proximoCursor;
         _hayMas = _cursor != null;
       });
@@ -323,10 +355,12 @@ class _MapaTrabajo extends StatefulWidget {
     super.key,
     required this.sesion,
     required this.mostrarMapaBase,
+    required this.cambio,
     required this.alAbrir,
   });
   final Sesion sesion;
   final bool mostrarMapaBase;
+  final _CambioTrabajo? cambio;
   final ValueChanged<ReclamoAdmin> alAbrir;
 
   @override
@@ -336,12 +370,40 @@ class _MapaTrabajo extends StatefulWidget {
 class _MapaTrabajoState extends State<_MapaTrabajo> {
   late Future<List<ReclamoAdmin>> _futuro;
   final _asignados = <int>{};
+  final Map<int, _CambioTrabajo> _cambiosPendientes = {};
+  List<ReclamoAdmin>? _reclamos;
   bool _errorMapa = false;
 
   @override
   void initState() {
     super.initState();
     _cargar();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapaTrabajo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final cambio = widget.cambio;
+    if (cambio == null || identical(cambio, oldWidget.cambio)) return;
+    _cambiosPendientes[cambio.reclamo.id] = cambio;
+    final reclamos = _reclamos;
+    if (reclamos != null) _aplicarCambioMapa(reclamos, cambio);
+  }
+
+  void _aplicarCambioMapa(List<ReclamoAdmin> reclamos, _CambioTrabajo cambio) {
+    final indice = reclamos.indexWhere((item) => item.id == cambio.reclamo.id);
+    reclamos.removeWhere((item) => item.id == cambio.reclamo.id);
+    if (cambio.activo) {
+      final posicion = indice < 0
+          ? reclamos.length
+          : indice > reclamos.length
+          ? reclamos.length
+          : indice;
+      reclamos.insert(posicion, cambio.reclamo);
+      _asignados.add(cambio.reclamo.id);
+    } else {
+      _asignados.remove(cambio.reclamo.id);
+    }
   }
 
   void _cargar() {
@@ -370,6 +432,10 @@ class _MapaTrabajoState extends State<_MapaTrabajo> {
         }
       } while (cursor != null);
     }
+    for (final cambio in _cambiosPendientes.values) {
+      _aplicarCambioMapa(resultado, cambio);
+    }
+    _reclamos = resultado;
     return resultado;
   }
 
@@ -581,11 +647,12 @@ class _MapaTrabajoState extends State<_MapaTrabajo> {
 class _DetalleTrabajo extends StatefulWidget {
   const _DetalleTrabajo({
     required this.sesion,
-    required this.id,
+    required this.reclamo,
     required this.mostrarMapaBase,
   });
   final Sesion sesion;
-  final int id;
+  final ReclamoAdmin reclamo;
+  int get id => reclamo.id;
   final bool mostrarMapaBase;
 
   @override
@@ -595,7 +662,8 @@ class _DetalleTrabajo extends StatefulWidget {
 class _DetalleTrabajoState extends State<_DetalleTrabajo> {
   late Future<ReclamoDetalleAdmin> _futuro;
   bool _guardando = false;
-  bool _cambio = false;
+  _CambioTrabajo? _cambio;
+  ReclamoDetalleAdmin? _detalleAnterior;
   String? _errorAccion;
 
   @override
@@ -629,7 +697,7 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
           mensaje: tomar ? 'Reclamo asignado' : 'Trabajo iniciado',
         );
         setState(() {
-          _cambio = true;
+          _cambio = _CambioTrabajo(widget.reclamo, tomar ? 'pendiente' : 'en_proceso');
           _cargar();
         });
       }
@@ -646,6 +714,40 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
     }
   }
 
+  Future<void> _abrirCierre({required bool rechazar}) async {
+    final cambio = await showFSheet<bool>(
+      context: context,
+      side: .btt,
+      mainAxisMaxRatio: 1,
+      resizeToAvoidBottomInset: false,
+      barrierDismissible: false,
+      draggable: false,
+      builder: (_) => Material(
+        color: context.theme.colors.card,
+        child: rechazar
+            ? RechazarReclamoSheet(
+                sesion: widget.sesion,
+                reclamoId: widget.id,
+                soloFalso: true,
+              )
+            : _FinalizarTrabajoSheet(
+                sesion: widget.sesion,
+                reclamoId: widget.id,
+              ),
+      ),
+    );
+    if (!mounted || cambio != true) return;
+    Notificaciones.mostrar(
+      context,
+      tipo: TipoNotificacion.exito,
+      mensaje: rechazar ? 'Reclamo rechazado' : 'Trabajo finalizado',
+    );
+    setState(() {
+      _cambio = _CambioTrabajo(widget.reclamo, rechazar ? 'rechazado' : 'resuelto');
+      _cargar();
+    });
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: false,
@@ -659,10 +761,10 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
       contenido: FutureBuilder<ReclamoDetalleAdmin>(
         future: _futuro,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+          if (snapshot.connectionState != ConnectionState.done && _detalleAnterior == null) {
             return const Center(child: FCircularProgress());
           }
-          if (snapshot.hasError) {
+          if (snapshot.hasError && _detalleAnterior == null) {
             return EstadoContenido(
               tipo: EstadoContenidoTipo.error,
               titulo: 'No pudimos cargar el reclamo',
@@ -675,7 +777,9 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
               ),
             );
           }
-          final reclamo = snapshot.requireData;
+          final reclamo = snapshot.data ?? _detalleAnterior!;
+          _detalleAnterior = reclamo;
+          final actualizando = snapshot.connectionState != ConnectionState.done;
           final responsable = reclamo.responsable;
           final mio =
               responsable != null &&
@@ -699,7 +803,7 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
               children: [
                 if (puedeTomar || puedeComenzar)
                   FButton(
-                    onPress: _guardando
+                    onPress: _guardando || actualizando || snapshot.hasError
                         ? null
                         : () => _accion(tomar: puedeTomar),
                     child: Text(
@@ -709,12 +813,31 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
                     ),
                   ),
                 if (reclamo.estado == 'en_proceso' && mio)
-                  Text(
-                    'Finalizar trabajo estará disponible próximamente.',
-                    style: TextStyle(
-                      color: context.theme.colors.mutedForeground,
+                  FButton(
+                    onPress: _guardando || actualizando || snapshot.hasError ? null : () => _abrirCierre(rechazar: false),
+                    child: const Text('Finalizar trabajo'),
+                  ),
+                if (mio &&
+                    (reclamo.estado == 'pendiente' ||
+                        reclamo.estado == 'en_proceso')) ...[
+                  const SizedBox(height: 8),
+                  FButton(
+                    variant: .destructive,
+                    onPress: _guardando || actualizando || snapshot.hasError ? null : () => _abrirCierre(rechazar: true),
+                    child: const Text('Rechazar por falso'),
+                  ),
+                ],
+                if (snapshot.hasError && _detalleAnterior != null) ...[
+                  const SizedBox(height: 12),
+                  AvisoEnLinea(
+                    tipo: TipoAviso.error,
+                    mensaje: 'No se pudo actualizar el reclamo.',
+                    accion: AccionAviso(
+                      etiqueta: 'Reintentar',
+                      alActivar: () => setState(_cargar),
                     ),
                   ),
+                ],
                 if (_errorAccion != null) ...[
                   const SizedBox(height: 12),
                   AvisoEnLinea(
@@ -733,4 +856,130 @@ class _DetalleTrabajoState extends State<_DetalleTrabajo> {
       ),
     ),
   );
+}
+
+class _FinalizarTrabajoSheet extends StatefulWidget {
+  const _FinalizarTrabajoSheet({required this.sesion, required this.reclamoId});
+  final Sesion sesion;
+  final int reclamoId;
+  @override
+  State<_FinalizarTrabajoSheet> createState() => _FinalizarTrabajoSheetState();
+}
+
+class _FinalizarTrabajoSheetState extends State<_FinalizarTrabajoSheet> {
+  final _observacion = TextEditingController();
+  bool _interna = false;
+  bool _guardando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _observacion.dispose();
+    super.dispose();
+  }
+
+  Future<void> _finalizar() async {
+    if (_guardando) return;
+    final observacion = _observacion.text.trim();
+    if (observacion.isEmpty) {
+      setState(() => _error = 'Escribí una observación.');
+      return;
+    }
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+    try {
+      await widget.sesion.api.finalizarReclamo(
+        widget.reclamoId,
+        observacion: observacion,
+        visibilidad: _interna ? 'interna' : 'publica',
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = error is ApiException
+            ? error.mensaje
+            : 'No se pudo finalizar el trabajo.');
+      }
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_guardando,
+    child: Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Finalizar trabajo', style: context.theme.typography.body.lg),
+              const SizedBox(height: 12),
+              FTextField.multiline(
+                control: FTextFieldControl.managed(controller: _observacion),
+                enabled: !_guardando,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 5000,
+                label: const Text('Observación'),
+              ),
+              const SizedBox(height: 16),
+              FCheckbox(
+                value: _interna,
+                enabled: !_guardando,
+                onChange: (valor) => setState(() => _interna = valor),
+                label: const Text('Observación interna'),
+                description: const Text('Si no la marcás, será pública.'),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                AvisoEnLinea(tipo: TipoAviso.error, mensaje: _error!),
+              ],
+              const SizedBox(height: 16),
+              FButton(
+                onPress: _guardando ? null : _finalizar,
+                child: Text(_guardando ? 'Finalizando…' : 'Finalizar trabajo'),
+              ),
+              const SizedBox(height: 8),
+              FButton(
+                variant: .outline,
+                onPress: _guardando ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
+class _CambioTrabajo {
+  _CambioTrabajo(ReclamoAdmin original, String estado)
+    : reclamo = ReclamoAdmin(
+        id: original.id,
+        titulo: original.titulo,
+        tipo: original.tipo,
+        estado: estado,
+        creador: original.creador,
+        emailCreador: original.emailCreador,
+        creadoEn: original.creadoEn,
+        descripcion: original.descripcion,
+        direccion: original.direccion,
+        latitud: original.latitud,
+        longitud: original.longitud,
+        tipoIcono: original.tipoIcono,
+        confirmacionesCount: original.confirmacionesCount,
+        desmentidasCount: original.desmentidasCount,
+      );
+
+  final ReclamoAdmin reclamo;
+  bool get activo => reclamo.estado == 'pendiente' || reclamo.estado == 'en_proceso';
 }
