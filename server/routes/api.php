@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminUsuarioController;
 use App\Http\Controllers\ReclamoAdminController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoTrabajoController;
@@ -11,7 +12,6 @@ use App\Http\Controllers\UsuarioActualController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\VotoController;
 use App\Http\Middleware\AsegurarCuentaActiva;
-use App\Http\Controllers\AdminUsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/status', function () {
@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
         Route::delete('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'desasignar'])->name('reclamos.desasignar');
         Route::post('/reclamos/{reclamo}/rechazar', [ReclamoTrabajoController::class, 'rechazar'])->name('reclamos.rechazar');
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
         Route::get('/admin/reclamos', [ReclamoAdminController::class, 'index'])->name('admin.reclamos.index');
         Route::get('/admin/reclamos/{reclamo}', [ReclamoAdminController::class, 'show'])->name('admin.reclamos.show');
         Route::get('/admin/tipos-reclamo', [TipoReclamoController::class, 'adminIndex'])->name('admin.tipos-reclamo.index');

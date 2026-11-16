@@ -96,6 +96,29 @@ class ApiClient {
     return _sesionDesde(json);
   }
 
+  /// Crea una cuenta interna sin modificar la sesión actual.
+  Future<void> crearCuentaInterna({
+    required String nombre,
+    required String apellido,
+    required String dni,
+    required String email,
+    required String password,
+    required String passwordConfirmacion,
+    required String rol,
+    String? telefono,
+  }) async {
+    await _post('/api/usuarios', {
+      'nombre': nombre,
+      'apellido': apellido,
+      'dni': dni,
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmacion,
+      'rol': rol,
+      'telefono': telefono,
+    });
+  }
+
   /// Los datos de la cuenta dueña del [token].
   Future<Usuario> usuarioActual() async {
     final json = await _get('/api/usuario');
@@ -158,7 +181,9 @@ class ApiClient {
     if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
     if (estado != null) parametros['estado'] = estado;
     if (tipoId != null) parametros['tipo'] = '$tipoId';
-    if (urgentes) parametros['urgentes'] = '1'; // 👈 NUEVO: Se envía al backend si está activo
+    if (urgentes)
+      parametros['urgentes'] =
+          '1'; // 👈 NUEVO: Se envía al backend si está activo
     if (cursor != null) parametros['cursor'] = cursor;
 
     final json = await _get('/api/admin/reclamos', parametros: parametros);

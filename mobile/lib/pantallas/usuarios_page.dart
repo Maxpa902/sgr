@@ -6,7 +6,9 @@ import 'package:forui/forui.dart';
 import '../api/api_exception.dart';
 import '../modelos/usuario.dart';
 import '../sesion/sesion.dart';
+import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
+import 'crear_cuenta_interna_page.dart';
 
 class UsuariosPage extends StatefulWidget {
   const UsuariosPage({super.key, required this.sesion});
@@ -39,6 +41,21 @@ class _UsuariosPageState extends State<UsuariosPage> {
     super.initState();
     _scrollController.addListener(_alDesplazarse);
     unawaited(_cargarPrimeraPagina(++_versionConsulta));
+  }
+
+  Future<void> _crearCuenta() async {
+    final creada = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            TemaApp(child: CrearCuentaInternaPage(sesion: widget.sesion)),
+      ),
+    );
+    if (creada == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cuenta creada correctamente.')),
+      );
+      await _recargar();
+    }
   }
 
   void _alCambiarBusqueda(TextEditingValue valor) {
@@ -213,6 +230,15 @@ class _UsuariosPageState extends State<UsuariosPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
               child: Column(
                 children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FButton(
+                      onPress: _crearCuenta,
+                      prefix: const Icon(Icons.person_add_alt_1),
+                      child: const Text('Crear cuenta'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   FTextField(
                     control: FTextFieldControl.managed(
                       controller: _busqueda,
