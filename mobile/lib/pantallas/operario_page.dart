@@ -20,7 +20,6 @@ import '../widgets/contenido_detalle_reclamo.dart';
 import '../widgets/deslizar_para_actualizar.dart';
 import 'acciones_reclamo_admin.dart';
 import 'cuenta_page.dart';
-import 'prueba_componentes_page.dart';
 
 /// Inicio del personal: trabajo asignado, reclamos disponibles y mapa.
 class OperarioPage extends StatefulWidget {
@@ -40,7 +39,6 @@ class OperarioPage extends StatefulWidget {
 class _OperarioPageState extends State<OperarioPage> {
   int _seccion = 0;
   _CambioTrabajo? _ultimoCambio;
-  SuperficiePagina _superficiePrueba = SuperficiePagina.contenido;
 
   Future<void> _abrir(ReclamoAdmin reclamo) async {
     final cambio = await Navigator.of(context).push<_CambioTrabajo>(
@@ -72,11 +70,6 @@ class _OperarioPageState extends State<OperarioPage> {
         etiqueta: 'Mapa',
         icono: Icons.map_outlined,
       ),
-      DestinoNavegacion(
-        id: 'prueba',
-        etiqueta: 'Prueba',
-        icono: Icons.widgets_outlined,
-      ),
     ];
     final contenido = switch (_seccion) {
       0 => FTabs(
@@ -102,17 +95,11 @@ class _OperarioPageState extends State<OperarioPage> {
           ),
         ],
       ),
-      1 => _MapaTrabajo(
+      _ => _MapaTrabajo(
         sesion: widget.sesion,
         mostrarMapaBase: widget.mostrarMapaBase,
         cambio: _ultimoCambio,
         alAbrir: _abrir,
-      ),
-      _ => PruebaComponentesPage(
-        superficie: _superficiePrueba,
-        alCambiarSuperficie: (superficie) => setState(() {
-          _superficiePrueba = superficie;
-        }),
       ),
     };
 
@@ -121,8 +108,6 @@ class _OperarioPageState extends State<OperarioPage> {
         titulo: destinos[_seccion].etiqueta,
         superficie: _seccion == 1
             ? SuperficiePagina.bordeABorde
-            : _seccion == 2
-            ? _superficiePrueba
             : SuperficiePagina.contenido,
         accionesEncabezado: [
           FHeaderAction(

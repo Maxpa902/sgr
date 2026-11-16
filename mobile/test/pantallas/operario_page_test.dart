@@ -40,6 +40,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Trabajo'), findsWidgets);
+    expect(find.text('Mapa'), findsOneWidget);
+    expect(find.text('Prueba'), findsNothing);
     expect(
       find.text('Corte de electricidad prolongado en todo el barrio'),
       findsOneWidget,

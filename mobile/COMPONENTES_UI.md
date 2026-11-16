@@ -7,9 +7,8 @@ Catálogo breve de los componentes compartidos de la app móvil. Complementa [UI
 - Implementación: `lib/widgets/ui/`.
 - Exportación: `lib/widgets/componentes_ui.dart`.
 - Tema usado por Operario: `lib/tema/`.
-- Galería de ejemplo: sección **Prueba** de Operario.
 
-Los componentes están implementados. Operario ya usa varios; la mayoría de las pantallas de vecino y administración todavía no se migraron. La galería sirve para revisar variantes, pero no reemplaza la validación en la app.
+Los componentes están implementados. Operario ya usa varios; la mayoría de las pantallas de vecino y administración todavía no se migraron. Los componentes no reemplazan la validación en la app.
 
 ## Catálogo
 
