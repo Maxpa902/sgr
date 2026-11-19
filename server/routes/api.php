@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminUsuarioController;
 use App\Http\Controllers\ReclamoAdminController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoTrabajoController;
@@ -45,14 +46,17 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
         Route::get('/reclamos/{reclamo}/trabajo', [ReclamoTrabajoController::class, 'show'])->name('reclamos.trabajo');
         Route::post('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'asignar'])->name('reclamos.asignar');
         Route::post('/reclamos/{reclamo}/comenzar', [ReclamoTrabajoController::class, 'comenzar'])->name('reclamos.comenzar');
+        Route::post('/reclamos/{reclamo}/finalizar', [ReclamoTrabajoController::class, 'finalizar'])->name('reclamos.finalizar');
+        Route::post('/reclamos/{reclamo}/rechazar', [ReclamoTrabajoController::class, 'rechazar'])->name('reclamos.rechazar');
     });
 
     Route::middleware('rol:admin')->group(function (): void {
         Route::delete('/reclamos/{reclamo}/asignacion', [ReclamoTrabajoController::class, 'desasignar'])->name('reclamos.desasignar');
-        Route::post('/reclamos/{reclamo}/rechazar', [ReclamoTrabajoController::class, 'rechazar'])->name('reclamos.rechazar');
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
         Route::get('/admin/reclamos', [ReclamoAdminController::class, 'index'])->name('admin.reclamos.index');
         Route::get('/admin/reclamos/{reclamo}', [ReclamoAdminController::class, 'show'])->name('admin.reclamos.show');
         Route::get('/admin/tipos-reclamo', [TipoReclamoController::class, 'adminIndex'])->name('admin.tipos-reclamo.index');
+        Route::get('/admin/usuarios-sancionados', [AdminUsuarioController::class, 'usuariosSancionados'])->name('admin.usuarios-sancionados.index');
     });
 });

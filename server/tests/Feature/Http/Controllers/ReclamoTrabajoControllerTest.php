@@ -94,4 +94,38 @@ class ReclamoTrabajoControllerTest extends TestCase
         }
         $this->assertDatabaseCount('historial_estados_reclamos', 0);
     }
+    public function test_finalizar_requiere_responsable_y_registra_historial_una_vez(): void
+    {
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $otro = User::factory()->create(['rol' => 'empleado']);
+        EstadoReclamo::firstOrCreate(['nombre' => 'resuelto']);
+        $reclamo = Reclamo::factory()->enEstado('en_proceso')->create(['responsable_id' => $empleado->id]);
+        $url = "/api/reclamos/{$reclamo->id}/finalizar";
+        Sanctum::actingAs($otro);
+        $this->postJson($url, ['observacion' => 'Terminado'])->assertStatus(409);
+        Sanctum::actingAs($empleado);
+        $this->postJson($url, ['observacion' => ''])->assertUnprocessable();
+        $this->postJson($url, ['observacion' => 'Terminado', 'visibilidad' => 'interna'])->assertOk()->assertJsonPath('data.estado', 'resuelto');
+        $this->assertDatabaseHas('historial_estados_reclamos', ['reclamo_id' => $reclamo->id, 'usuario_id' => $empleado->id, 'observacion' => 'Terminado', 'visibilidad' => 'interna']);
+        $this->postJson($url, ['observacion' => 'Otra vez'])->assertStatus(409);
+        $this->assertDatabaseCount('historial_estados_reclamos', 1);
+    }
+
+    public function test_operario_rechaza_solo_falso_y_asignado(): void
+    {
+        $empleado = User::factory()->create(['rol' => 'empleado']);
+        $otro = User::factory()->create(['rol' => 'empleado']);
+        EstadoReclamo::firstOrCreate(['nombre' => 'rechazado']);
+        $reclamo = Reclamo::factory()->create(['responsable_id' => $empleado->id]);
+        $url = "/api/reclamos/{$reclamo->id}/rechazar";
+        Sanctum::actingAs($otro);
+        $this->postJson($url, ['observacion' => 'Falso', 'es_falso' => true])->assertStatus(409);
+        Sanctum::actingAs($empleado);
+        $this->postJson($url, ['observacion' => 'Otro motivo', 'es_falso' => false])->assertForbidden();
+        $this->postJson($url, ['observacion' => 'Falso', 'es_falso' => true])->assertOk();
+        $this->postJson($url, ['observacion' => 'Falso', 'es_falso' => true])->assertStatus(409);
+        $this->assertDatabaseCount('sanciones', 1);
+        $this->assertDatabaseHas('historial_estados_reclamos', ['reclamo_id' => $reclamo->id, 'observacion' => 'Falso', 'visibilidad' => 'publica']);
+    }
+
 }

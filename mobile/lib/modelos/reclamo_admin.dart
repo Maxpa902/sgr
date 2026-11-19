@@ -13,9 +13,11 @@ class ReclamoAdmin {
     this.latitud,
     this.longitud,
     this.tipoIcono,
+    required this.confirmacionesCount,
+    required this.desmentidasCount,
   });
 
-  factory ReclamoAdmin.fromJson(Map<String, dynamic> json) => ReclamoAdmin(
+factory ReclamoAdmin.fromJson(Map<String, dynamic> json) => ReclamoAdmin(
     id: json['id'] as int,
     titulo: json['titulo'] as String,
     descripcion: json['descripcion'] as String?,
@@ -28,6 +30,8 @@ class ReclamoAdmin {
     latitud: (json['latitud'] as num?)?.toDouble(),
     longitud: (json['longitud'] as num?)?.toDouble(),
     tipoIcono: json['tipo_icono'] as String?,
+    confirmacionesCount: json['confirmaciones_count'] != null ? (json['confirmaciones_count'] as num).toInt() : 0,
+    desmentidasCount: json['desmentidas_count'] != null ? (json['desmentidas_count'] as num).toInt() : 0,
   );
 
   final int id;
@@ -42,4 +46,6 @@ class ReclamoAdmin {
   final double? latitud;
   final double? longitud;
   final String? tipoIcono;
+  final int confirmacionesCount;
+  final int desmentidasCount;
 }

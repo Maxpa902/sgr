@@ -11,9 +11,9 @@ class ReclamoAdminDetalleResource extends ReclamoAdminResource
     {
         $historial = $this->historialEstados;
         $cierre = in_array($this->estado->nombre, ['resuelto', 'rechazado'], true)
-            ? $historial->last(fn ($evento) => $evento->estado_id === $this->estado_id)
+            ? $historial->last(fn($evento) => $evento->estado_id === $this->estado_id)
             : null;
-        $persona = fn ($usuario) => $usuario ? [
+        $persona = fn($usuario) => $usuario ? [
             'id' => $usuario->id,
             'nombre' => $usuario->nombre,
             'apellido' => $usuario->apellido,
@@ -27,7 +27,12 @@ class ReclamoAdminDetalleResource extends ReclamoAdminResource
                 'nombre' => $this->tipoReclamo->nombre,
                 'icono' => $this->tipoReclamo->icono,
             ],
-            'fotos' => $this->fotos->map(fn ($foto) => asset('storage/'.$foto->ruta))->values(),
+            // INCLUIMOS LOS DATOS DEL CREADOR Y SUS SANCIONES ACTIVAS:
+            'creador' => $this->usuario ? trim($this->usuario->nombre . ' ' . $this->usuario->apellido) : '',
+            'email_creador' => $this->usuario?->email ?? '',
+            'sanciones_activas_count' => $this->usuario?->sancionesActivas()->count() ?? 0,
+
+            'fotos' => $this->fotos->map(fn($foto) => asset('storage/' . $foto->ruta))->values(),
             'responsable' => $this->responsable ? [
                 'id' => $this->responsable->id,
                 'nombre' => $this->responsable->nombre,
@@ -41,7 +46,7 @@ class ReclamoAdminDetalleResource extends ReclamoAdminResource
                 'autor' => $persona($this->desasignadoPor),
                 'creado_en' => $this->desasignado_en->toIso8601String(),
             ] : null,
-            'historial' => $historial->map(fn ($evento) => [
+            'historial' => $historial->map(fn($evento) => [
                 'id' => $evento->id,
                 'estado' => $evento->estado->nombre,
                 'autor' => $persona($evento->usuario),

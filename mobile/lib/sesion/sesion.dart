@@ -60,18 +60,22 @@ class Sesion extends ChangeNotifier {
     cursor: cursor,
   );
 
-  /// Consulta un bloque filtrado de reclamos para el directorio del admin.
+/// Lista reclamos para el panel de admin a través de la sesión.
   Future<PaginaReclamosAdmin> listarReclamosAdmin({
     String? busqueda,
     String? estado,
     int? tipoId,
+    bool urgentes = false,
     String? cursor,
-  }) => _api.listarReclamosAdmin(
-    busqueda: busqueda,
-    estado: estado,
-    tipoId: tipoId,
-    cursor: cursor,
-  );
+  }) async {
+    return api.listarReclamosAdmin(
+      busqueda: busqueda,
+      estado: estado,
+      tipoId: tipoId,
+      urgentes: urgentes,
+      cursor: cursor,
+    );
+  }
 
   Future<ReclamoDetalleAdmin> obtenerReclamoAdmin(int id) =>
       _api.obtenerReclamoAdmin(id);
@@ -135,6 +139,11 @@ class Sesion extends ChangeNotifier {
         _cambiarEstado(EstadoSesion.sinConexion);
       }
     }
+  }
+
+
+  Future<List<Usuario>> obtenerUsuariosConSancionesOrdenados() async {
+    return _api.listarUsuariosConSanciones();
   }
 
   /// Lanza [ApiException] si el server rechaza los datos.

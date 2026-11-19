@@ -13,6 +13,7 @@ class ReclamoDetalleAdmin {
     required this.emailCreador,
     required this.creadoEn,
     required this.fotos,
+    required this.sancionesActivasCount,
     this.descripcion,
     this.direccion,
     this.responsable,
@@ -25,6 +26,10 @@ class ReclamoDetalleAdmin {
 
   factory ReclamoDetalleAdmin.fromJson(Map<String, dynamic> json) {
     final fotosJson = json['fotos'];
+
+    // Si el JSON trae los datos del usuario creador (o un campo plano)
+    // Ajusta según cómo te devuelva Laravel el conteo (ej: json['sanciones_activas_count'] o dentro de un objeto 'usuario')
+    final usuarioJson = json['usuario'] is Map<String, dynamic> ? json['usuario'] as Map<String, dynamic> : json;
 
     return ReclamoDetalleAdmin(
       id: json['id'] as int,
@@ -41,6 +46,8 @@ class ReclamoDetalleAdmin {
       fotos: fotosJson is List
           ? fotosJson.map((foto) => foto.toString()).toList(growable: false)
           : const [],
+
+      sancionesActivasCount: (usuarioJson['sanciones_activas_count'] ?? json['sanciones_activas_count']) as int? ?? 0,
       responsable: json['responsable'] is Map<String, dynamic>
           ? ResponsableReclamo.fromJson(
               json['responsable'] as Map<String, dynamic>,
@@ -83,6 +90,7 @@ class ReclamoDetalleAdmin {
   final String emailCreador;
   final DateTime creadoEn;
   final List<String> fotos;
+  final int sancionesActivasCount;
   final ResponsableReclamo? responsable;
   final CierreReclamo? cierre;
   final ResponsableReclamo? asignadoPor;

@@ -8,6 +8,7 @@ import '../widgets/deslizar_para_actualizar.dart';
 import '../widgets/componentes_ui.dart';
 import '../widgets/contenido_detalle_reclamo.dart';
 import 'acciones_reclamo_admin.dart';
+import '../widgets/lista_votantes_sheet.dart';
 
 class DetalleReclamoAdminPage extends StatefulWidget {
   const DetalleReclamoAdminPage({
@@ -243,6 +244,13 @@ class _DetalleReclamoAdminPageState extends State<DetalleReclamoAdminPage> {
             alAsignar: _asignar,
             alDesasignar: _desasignar,
             alRechazar: _rechazar,
+
+            alVerVotantes: () => ListaVotantesSheet.mostrar(
+              context,
+              sesion: widget.sesion,
+              reclamoId: widget.reclamoId,
+            ),
+
             mostrarMapaBase: widget.mostrarMapaBase,
           ),
         );

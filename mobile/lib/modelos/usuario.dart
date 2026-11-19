@@ -8,6 +8,8 @@ class Usuario {
     required this.rol,
     this.telefono,
     this.activo,
+    this.suspendidoHasta,
+    required this.sancionesActivas,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,10 @@ class Usuario {
       rol: json['rol'] as String,
       telefono: json['telefono'] as String?,
       activo: json['activo'] as bool?,
+      sancionesActivas: json['sanciones_activas_count'] as int? ?? json['sanciones_activas'] as int? ?? 0,
+      suspendidoHasta: json['suspendido_hasta'] != null
+          ? DateTime.tryParse(json['suspendido_hasta'] as String)
+          : null,
     );
   }
 
@@ -28,6 +34,8 @@ class Usuario {
   final String email;
   final String? telefono;
   final bool? activo;
+  final int sancionesActivas;
+  final DateTime? suspendidoHasta;
 
   /// `ciudadano`, `empleado` o `admin`, igual que en la base de datos.
   final String rol;
@@ -35,6 +43,11 @@ class Usuario {
   bool get esOperario => rol == 'empleado';
 
   bool get esAdmin => rol == 'admin';
+
+  bool get estaSuspendido {
+    if (suspendidoHasta == null) return false;
+    return suspendidoHasta!.isAfter(DateTime.now());
+  }
 
   /// Nombre del rol para mostrar en pantalla.
   String get rolParaMostrar => switch (rol) {

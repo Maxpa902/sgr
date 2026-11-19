@@ -22,6 +22,8 @@ class ReclamoAdminResource extends JsonResource
             'creador' => trim("{$this->usuario->nombre} {$this->usuario->apellido}"),
             'email_creador' => $this->usuario->email,
             'creado_en' => $this->created_at->toIso8601String(),
+            'confirmaciones_count' => $this->confirmaciones_count ?? 0,
+            'desmentidas_count' => $this->desmentidas_count ?? 0,
         ];
     }
 }

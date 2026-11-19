@@ -7,6 +7,7 @@ import '../mapa/estilos.dart';
 import '../mapa/zona.dart';
 import '../modelos/reclamo_detalle_admin.dart';
 import 'componentes_ui.dart';
+import '../widgets/lista_votantes_sheet.dart';
 
 class ContenidoDetalleReclamo extends StatelessWidget {
   const ContenidoDetalleReclamo({
@@ -16,6 +17,7 @@ class ContenidoDetalleReclamo extends StatelessWidget {
     this.alAsignar,
     this.alDesasignar,
     this.alRechazar,
+    this.alVerVotantes,
     this.accionesOperario,
     this.responsableTexto,
     this.esAdmin = false,
@@ -27,10 +29,12 @@ class ContenidoDetalleReclamo extends StatelessWidget {
   final VoidCallback? alAsignar;
   final VoidCallback? alDesasignar;
   final VoidCallback? alRechazar;
+  final VoidCallback? alVerVotantes;
   final Widget? accionesOperario;
   final String? responsableTexto;
   final bool esAdmin;
   final bool mostrarMapaBase;
+
 
   @override
   Widget build(BuildContext context) {
@@ -327,6 +331,44 @@ class ContenidoDetalleReclamo extends StatelessWidget {
               style: TextStyle(color: colores.mutedForeground),
             ),
           ],
+
+          if (reclamo.sancionesActivasCount > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      reclamo.sancionesActivasCount >= 3
+                          ? 'Usuario suspendido por reportes falsos activos.'
+                          : 'Vecino en riesgo: ${reclamo.sancionesActivasCount} de 3 reportes falsos (a ${3-reclamo.sancionesActivasCount} de suspensión).',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+          FButton(
+            variant: .outline,
+            onPress: alVerVotantes,
+            prefix: const Icon(Icons.people_alt_outlined),
+            child: const Text('Ver lista de votantes'),
+          ),
         ],
       ],
     );

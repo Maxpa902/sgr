@@ -63,5 +63,7 @@ class ReclamoMapa {
   final DateTime creadoEn;
   final List<String> fotos;
 
-  bool get destacado => confirmaciones >= destacadoDesde;
+  // CAMBIO
+  int get puntajeNeto => confirmaciones - desmentidas;
+  bool get destacado => puntajeNeto >= destacadoDesde;
 }

@@ -2,15 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CrearCuentaInternaRequest;
 use App\Http\Resources\UsuarioAdminResource;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
+    public function store(CrearCuentaInternaRequest $request): JsonResponse
+    {
+        $usuario = new User($request->safe()->only(['nombre', 'apellido', 'dni', 'email', 'password', 'telefono']));
+        $usuario->rol = $request->validated('rol');
+        $usuario->save();
+
+        return (new UsuarioAdminResource($usuario->refresh()))
+            ->response()->setStatusCode(Response::HTTP_CREATED);
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $filtros = $request->validate([

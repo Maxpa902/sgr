@@ -96,10 +96,43 @@ class ApiClient {
     return _sesionDesde(json);
   }
 
+  /// Crea una cuenta interna sin modificar la sesión actual.
+  Future<void> crearCuentaInterna({
+    required String nombre,
+    required String apellido,
+    required String dni,
+    required String email,
+    required String password,
+    required String passwordConfirmacion,
+    required String rol,
+    String? telefono,
+  }) async {
+    await _post('/api/usuarios', {
+      'nombre': nombre,
+      'apellido': apellido,
+      'dni': dni,
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmacion,
+      'rol': rol,
+      'telefono': telefono,
+    });
+  }
+
   /// Los datos de la cuenta dueña del [token].
   Future<Usuario> usuarioActual() async {
     final json = await _get('/api/usuario');
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
+  Future<List<Usuario>> listarUsuariosConSanciones() async {
+    final json = await _get('/api/admin/usuarios-sancionados');
+    final data = json['data'] as List? ?? json as List? ?? [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(Usuario.fromJson)
+        .toList(growable: false);
   }
 
   /// Un bloque de cuentas filtrado, ordenado por apellido y nombre.
@@ -141,12 +174,16 @@ class ApiClient {
     String? busqueda,
     String? estado,
     int? tipoId,
+    bool urgentes = false,
     String? cursor,
   }) async {
     final parametros = <String, Object>{};
     if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
     if (estado != null) parametros['estado'] = estado;
     if (tipoId != null) parametros['tipo'] = '$tipoId';
+    if (urgentes)
+      parametros['urgentes'] =
+          '1'; // 👈 NUEVO: Se envía al backend si está activo
     if (cursor != null) parametros['cursor'] = cursor;
 
     final json = await _get('/api/admin/reclamos', parametros: parametros);
@@ -195,6 +232,10 @@ class ApiClient {
 
   Future<void> comenzarReclamo(int id) async {
     await _post('/api/reclamos/$id/comenzar', {});
+  }
+
+  Future<void> finalizarReclamo(int id, {required String observacion, required String visibilidad}) async {
+    await _post('/api/reclamos/$id/finalizar', {'observacion': observacion, 'visibilidad': visibilidad});
   }
 
   Future<void> asignarReclamo(int id, int responsableId) async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -39,6 +40,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Trabajo'), findsWidgets);
+    expect(find.text('Mapa'), findsOneWidget);
+    expect(find.text('Prueba'), findsNothing);
     expect(
       find.text('Corte de electricidad prolongado en todo el barrio'),
       findsOneWidget,
@@ -51,6 +55,8 @@ void main() {
   ) async {
     var asignado = false;
     var estado = 'pendiente';
+    Completer<void>? esperarDetalle;
+    final paginaDemorada = Completer<void>();
     final sesion = sesionDePrueba((request) async {
       if (request.url.path == '/api/usuario') {
         return respuestaJson({
@@ -59,13 +65,24 @@ void main() {
       }
       if (request.url.path == '/api/trabajo/reclamos') {
         final vista = request.url.queryParameters['vista'];
+        if (vista == 'disponibles' && request.url.queryParameters['cursor'] == 'tarde') {
+          await paginaDemorada.future;
+          return respuestaJson({
+            'data': [_lista('pendiente')],
+            'meta': {'next_cursor': null},
+          }, 200);
+        }
         final incluir = vista == 'disponibles' ? !asignado : asignado;
         return respuestaJson({
           'data': incluir ? [_lista(estado)] : [],
-          'meta': {'total': incluir ? 1 : 0, 'next_cursor': null},
+          'meta': {
+            'total': incluir ? 1 : 0,
+            'next_cursor': vista == 'disponibles' && incluir ? 'tarde' : null,
+          },
         }, 200);
       }
       if (request.url.path == '/api/trabajo/reclamos/28') {
+        await esperarDetalle?.future;
         return respuestaJson({'data': _detalle(estado, asignado)}, 200);
       }
       if (request.url.path == '/api/reclamos/28/asignacion') {
@@ -88,23 +105,35 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('No tenés reclamos asignados.'), findsOneWidget);
+    expect(find.text('No tenés reclamos asignados'), findsOneWidget);
     await tester.tap(find.text('Disponibles'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cable caído'));
     await tester.pumpAndSettle();
+    esperarDetalle = Completer<void>();
     await tester.tap(find.text('Tomar reclamo'));
+    await tester.pump();
+    expect(find.text('Cable caído'), findsOneWidget);
+    expect(find.text('Reclamo asignado'), findsOneWidget);
+    esperarDetalle!.complete();
     await tester.pumpAndSettle();
     expect(find.text('Comenzar trabajo'), findsOneWidget);
     await tester.tap(find.text('Comenzar trabajo'));
+    await tester.pump();
+    expect(find.text('Trabajo iniciado'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('En proceso'), findsOneWidget);
     expect(find.text('Comenzar trabajo'), findsNothing);
     expect(
-      find.text('Finalizar trabajo estará disponible próximamente.'),
+      find.text('Finalizar trabajo'),
       findsOneWidget,
     );
     await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    paginaDemorada.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('No hay reclamos disponibles'), findsOneWidget);
+    await tester.tap(find.text('Asignados a mí'));
     await tester.pumpAndSettle();
     expect(find.text('Cable caído'), findsOneWidget);
   });

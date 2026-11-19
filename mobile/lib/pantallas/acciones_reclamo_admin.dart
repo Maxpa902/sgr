@@ -258,10 +258,12 @@ class RechazarReclamoSheet extends StatefulWidget {
     super.key,
     required this.sesion,
     required this.reclamoId,
+    this.soloFalso = false,
   });
 
   final Sesion sesion;
   final int reclamoId;
+  final bool soloFalso;
 
   @override
   State<RechazarReclamoSheet> createState() => _RechazarReclamoSheetState();
@@ -270,6 +272,12 @@ class RechazarReclamoSheet extends StatefulWidget {
 class _RechazarReclamoSheetState extends State<RechazarReclamoSheet> {
   final _motivo = TextEditingController();
   bool _esFalso = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _esFalso = widget.soloFalso;
+  }
   bool _guardando = false;
   String? _error;
 
@@ -389,6 +397,9 @@ class _RechazarReclamoSheetState extends State<RechazarReclamoSheet> {
                 label: const Text('Motivo del rechazo'),
               ),
               const SizedBox(height: 16),
+              if (widget.soloFalso)
+                const Text('El rechazo por falso genera una sanción.')
+              else
               FCheckbox(
                 value: _esFalso,
                 enabled: !_guardando,
