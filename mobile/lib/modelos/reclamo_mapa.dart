@@ -1,5 +1,12 @@
 import 'tipo_reclamo.dart';
 
+class FotoReclamo {
+  const FotoReclamo({required this.id, required this.url});
+
+  final int id;
+  final String url;
+}
+
 /// Los datos de un reclamo para el mapa y su detalle.
 class ReclamoMapa {
   const ReclamoMapa({
@@ -17,6 +24,7 @@ class ReclamoMapa {
     this.descripcion,
     this.direccion,
     this.fotos = const [],
+    this.fotosDetalle = const [],
   });
 
   factory ReclamoMapa.fromJson(Map<String, dynamic> json) {
@@ -24,6 +32,17 @@ class ReclamoMapa {
     final List<String> fotosLista = (fotosJson is List)
         ? fotosJson.map((e) => e.toString()).toList()
         : const [];
+
+    final fotosDetalleJson = json['fotos_detalle'];
+    final List<FotoReclamo> detalleLista = [
+      if (fotosDetalleJson is List)
+        for (final f in fotosDetalleJson)
+          if (f is Map<String, dynamic>)
+            FotoReclamo(
+              id: f['id'] as int,
+              url: f['url'] as String,
+            ),
+    ];
 
     return ReclamoMapa(
       id: json['id'] as int,
@@ -43,6 +62,7 @@ class ReclamoMapa {
       tipo: TipoReclamo.fromJson(json['tipo'] as Map<String, dynamic>),
       direccion: json['direccion'] as String?,
       fotos: fotosLista,
+      fotosDetalle: detalleLista,
     );
   }
 
@@ -62,8 +82,8 @@ class ReclamoMapa {
   final int desmentidas;
   final DateTime creadoEn;
   final List<String> fotos;
+  final List<FotoReclamo> fotosDetalle;
 
-  // CAMBIO
   int get puntajeNeto => confirmaciones - desmentidas;
   bool get destacado => puntajeNeto >= destacadoDesde;
 }

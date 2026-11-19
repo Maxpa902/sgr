@@ -10,6 +10,7 @@ import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'almacen_token.dart';
 
+
 /// En qué situación está la sesión. La app elige qué pantalla mostrar según esto.
 enum EstadoSesion {
   /// Se está revisando si hay una sesión guardada.
@@ -31,7 +32,7 @@ enum EstadoSesion {
 /// que la escuchan se vuelven a dibujar.
 class Sesion extends ChangeNotifier {
   Sesion({required this._api, required this._almacen});
-
+  
   final ApiClient _api;
   final AlmacenToken _almacen;
 
@@ -82,29 +83,62 @@ class Sesion extends ChangeNotifier {
 
   Future<List<TipoReclamo>> tiposDeReclamoAdmin() => _api.tiposDeReclamoAdmin();
 
+  int _versionReclamos = 0;
+  int get versionReclamos => _versionReclamos;
   /// Obtiene la lista de reclamos creados por el usuario actual o en los que votó.
   Future<List<ReclamoMapa>> misReclamos() => _api.misReclamos();
 
   Future<ReclamoMapa> crearReclamo({
-    required String titulo,
-    required String descripcion,
-    required int tipoId,
-    required double latitud,
-    required double longitud,
-    File? imagen,
-    bool forzarCreacion = false,
-  }) {
-    return _api.crearReclamo(
-      titulo: titulo,
-      descripcion: descripcion,
-      tipoId: tipoId,
-      latitud: latitud,
-      longitud: longitud,
-      imagen: imagen,
-      forzarCreacion: forzarCreacion,
-    );
-  }
+      required String titulo,
+      required String descripcion,
+      required int tipoId,
+      required double latitud,
+      required double longitud,
+      File? imagen,
+      bool forzarCreacion = false,
+    }) async {
+      final creado = await _api.crearReclamo(
+        titulo: titulo,
+        descripcion: descripcion,
+        tipoId: tipoId,
+        latitud: latitud,
+        longitud: longitud,
+        imagen: imagen,
+        forzarCreacion: forzarCreacion,
+      );
+      _versionReclamos++;
+      notifyListeners();
+      return creado;
+    }
 
+    Future<ReclamoMapa> editarReclamo({
+      required int id,
+      required String titulo,
+      required String descripcion,
+      required double latitud,
+      required double longitud,
+      List<int> fotosEliminar = const [],
+      List<File> nuevasImagenes = const [],
+    }) async {
+      final editado = await _api.editarReclamo(
+        id: id,
+        titulo: titulo,
+        descripcion: descripcion,
+        latitud: latitud,
+        longitud: longitud,
+        fotosEliminar: fotosEliminar,
+        nuevasImagenes: nuevasImagenes,
+      );
+      _versionReclamos++;
+      notifyListeners();
+      return editado;
+    }
+
+    Future<void> eliminarReclamo(int id) async {
+      await _api.eliminarReclamo(id);
+      _versionReclamos++;
+      notifyListeners();
+    }
   /// Obtiene la lista de vecinos que votaron en un reclamo.
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) {
     return _api.obtenerVotantes(reclamoId);
@@ -175,6 +209,30 @@ class Sesion extends ChangeNotifier {
       telefono: telefono,
     );
     await _guardar(sesion);
+  }
+
+
+  /// Actualiza el perfil del usuario actual en el server y refresca la sesión local.
+  Future<void> actualizarPerfil({
+    required String nombre,
+    required String apellido,
+    required String email,
+    String? telefono,
+    String? passwordActual,
+    String? password,
+    String? passwordConfirmacion,
+  }) async {
+    final actualizado = await _api.actualizarPerfil(
+      nombre: nombre,
+      apellido: apellido,
+      email: email,
+      telefono: telefono,
+      passwordActual: passwordActual,
+      password: password,
+      passwordConfirmacion: passwordConfirmacion,
+    );
+    _usuario = actualizado;
+    notifyListeners();
   }
 
   /// Cierra la sesión en el server y en el celular. Si el server no responde,
