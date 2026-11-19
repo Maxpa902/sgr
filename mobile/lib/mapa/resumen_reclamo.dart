@@ -8,6 +8,7 @@ import '../tema/colores.dart';
 import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import 'estilos.dart';
+import '../widgets/comentarios_reclamo.dart';
 import '../widgets/lista_votantes_sheet.dart';
 import '../widgets/seguimiento_reclamo.dart';
 
@@ -121,7 +122,13 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
       conNotificaciones: false,
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          // Abajo deja lugar para el teclado, así no tapa el campo de comentario.
+          padding: EdgeInsets.fromLTRB(
+            24,
+            8,
+            24,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,6 +303,10 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
               const Divider(height: 1),
               const SizedBox(height: 16),
               SeguimientoReclamo(sesion: widget.sesion, reclamoId: reclamo.id),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              ComentariosReclamo(sesion: widget.sesion, reclamoId: reclamo.id),
             ],
           ),
         ),

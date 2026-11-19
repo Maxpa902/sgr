@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../modelos/cambio_de_estado.dart';
+import '../modelos/comentario.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/reclamo_admin.dart';
 import '../modelos/reclamo_detalle_admin.dart';
@@ -371,6 +372,39 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(CambioDeEstado.fromJson)
         .toList(growable: false);
+  }
+
+  Future<ComentariosDeReclamo> listarComentarios(int reclamoId) async {
+    final json = await _get('/api/reclamos/$reclamoId/comentarios');
+    return ComentariosDeReclamo.fromJson(json);
+  }
+
+  Future<void> crearComentario(int reclamoId, String contenido) async {
+    await _post('/api/reclamos/$reclamoId/comentarios', {
+      'contenido': contenido,
+    });
+  }
+
+  Future<void> editarComentario(int comentarioId, String contenido) async {
+    final uri = _uri('/api/comentarios/$comentarioId');
+    await _procesar(
+      _http.patch(
+        uri,
+        headers: _encabezados(conCuerpo: true),
+        body: jsonEncode({'contenido': contenido}),
+      ),
+      metodo: 'PATCH',
+      uri: uri,
+    );
+  }
+
+  Future<void> borrarComentario(int comentarioId) async {
+    final uri = _uri('/api/comentarios/$comentarioId');
+    await _procesar(
+      _http.delete(uri, headers: _encabezados()),
+      metodo: 'DELETE',
+      uri: uri,
+    );
   }
 
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {
