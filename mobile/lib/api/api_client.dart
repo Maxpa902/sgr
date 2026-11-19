@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import '../modelos/cambio_de_estado.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/reclamo_admin.dart';
 import '../modelos/reclamo_detalle_admin.dart';
@@ -360,6 +361,16 @@ class ApiClient {
     );
 
     return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  /// Seguimiento público: los cambios de estado, del más viejo al más nuevo.
+  Future<List<CambioDeEstado>> seguimientoDeReclamo(int reclamoId) async {
+    final json = await _get('/api/reclamos/$reclamoId/historial');
+    final data = json['data'] as List? ?? const [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(CambioDeEstado.fromJson)
+        .toList(growable: false);
   }
 
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {

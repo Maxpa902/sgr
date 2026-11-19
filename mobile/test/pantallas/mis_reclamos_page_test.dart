@@ -215,6 +215,8 @@ void main() {
             },
           ],
         }, 200),
+        '/api/reclamos/3/historial': (_) async =>
+            respuestaJson({'data': []}, 200),
         '/api/reclamos/3/votos': (_) async {
           intentos++;
           if (intentos == 1) {

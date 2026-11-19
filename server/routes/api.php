@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminUsuarioController;
+use App\Http\Controllers\HistorialPublicoController;
 use App\Http\Controllers\ReclamoAdminController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoTrabajoController;
@@ -40,6 +41,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::get('/reclamos/{reclamo}/votos', [VotoController::class, 'index'])->name('reclamos.votos.index');
     Route::post('/reclamos/{reclamo}/votar', [VotoController::class, 'store'])
         ->middleware('rol:ciudadano,empleado')->name('reclamos.votar');
+    Route::get('/reclamos/{reclamo}/historial', [HistorialPublicoController::class, 'index'])->name('reclamos.historial.index');
 
     Route::middleware('rol:admin,empleado')->group(function (): void {
         Route::get('/trabajo/reclamos', [ReclamoTrabajoListadoController::class, 'index'])->name('trabajo.reclamos.index');

@@ -9,6 +9,7 @@ import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import 'estilos.dart';
 import '../widgets/lista_votantes_sheet.dart';
+import '../widgets/seguimiento_reclamo.dart';
 
 /// Panel que aparece abajo al tocar un pin, con lo principal del reclamo.
 class ResumenReclamo extends StatefulWidget {
@@ -291,6 +292,10 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
                   ),
                 ),
               ],
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              SeguimientoReclamo(sesion: widget.sesion, reclamoId: reclamo.id),
             ],
           ),
         ),
