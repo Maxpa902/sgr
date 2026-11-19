@@ -32,7 +32,7 @@ enum EstadoSesion {
 /// que la escuchan se vuelven a dibujar.
 class Sesion extends ChangeNotifier {
   Sesion({required this._api, required this._almacen});
-  
+
   final ApiClient _api;
   final AlmacenToken _almacen;
 
@@ -92,6 +92,12 @@ class Sesion extends ChangeNotifier {
     estado: estado,
     cursor: cursor,
   );
+
+  /// Refresca los datos del usuario logueado desde el server (sanciones, suspensión, etc.).
+  Future<void> refrescarUsuario() async {
+    _usuario = await _api.usuarioActual();
+    notifyListeners();
+  }
 
   Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) =>
       _api.actualizarCuenta(usuarioId, activo: activo, rol: rol);

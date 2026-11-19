@@ -152,7 +152,7 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
-  
+
 
   /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
   Future<List<Usuario>> listarUsuariosConSanciones() async {
@@ -406,7 +406,7 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
         if (tipos != null) 'tipos[]': [for (final tipo in tipos) '$tipo'],
       },
     );
-    
+
         return [
     for (final reclamo in json['data'] as List)
       _reclamoDesdeJson(reclamo as Map<String, dynamic>),
@@ -555,7 +555,7 @@ ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
     }
     return url;
   }
-  
+
 
   Future<Map<String, dynamic>> _get(
     String ruta, {
