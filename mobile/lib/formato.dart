@@ -20,6 +20,14 @@ String haceCuanto(DateTime fecha, {DateTime? ahora}) {
   return 'el $dia/$mes/${fecha.year}';
 }
 
+/// Fecha corta en hora local: "18/12/2026".
+String fechaCorta(DateTime fecha) {
+  final local = fecha.toLocal();
+  final dia = local.day.toString().padLeft(2, '0');
+  final mes = local.month.toString().padLeft(2, '0');
+  return '$dia/$mes/${local.year}';
+}
+
 String _hace(int cantidad, String singular, String plural) {
   return 'hace $cantidad ${cantidad == 1 ? singular : plural}';
 }

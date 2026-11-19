@@ -311,7 +311,7 @@ class _RechazarReclamoSheetState extends State<RechazarReclamoSheet> {
               const SizedBox(height: 12),
               Text(
                 _esFalso
-                    ? 'El rechazo es definitivo y generará una sanción. Con tres sanciones vigentes se suspenderá la cuenta durante 30 días.'
+                    ? 'El rechazo es definitivo y el vecino quedará suspendido durante 30 días.'
                     : 'El rechazo es definitivo y el motivo será visible públicamente.',
               ),
               const SizedBox(height: 20),
@@ -398,7 +398,7 @@ class _RechazarReclamoSheetState extends State<RechazarReclamoSheet> {
               ),
               const SizedBox(height: 16),
               if (widget.soloFalso)
-                const Text('El rechazo por falso genera una sanción.')
+                const Text('El rechazo por falso suspende al vecino durante 30 días.')
               else
               FCheckbox(
                 value: _esFalso,
@@ -408,7 +408,7 @@ class _RechazarReclamoSheetState extends State<RechazarReclamoSheet> {
                     : (valor) => setState(() => _esFalso = valor),
                 label: const Text('El reclamo es falso'),
                 description: const Text(
-                  'Genera una sanción; con tres vigentes, la cuenta se suspende 30 días.',
+                  'El vecino queda suspendido durante 30 días.',
                 ),
               ),
               if (_error != null)

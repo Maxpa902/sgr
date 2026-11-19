@@ -159,7 +159,7 @@ El historial no tiene `updated_at` y sus registros son inmutables. Se ordena por
 | `created_at` | `timestamp()` | Fecha de la sanción |
 | `updated_at` | `timestamp()` | Fecha de última actualización |
 
-Un reclamo genera como máximo una sanción. `usuario_id` repite el creador del reclamo para consultar directamente las sanciones de un usuario. Quién rechazó el reclamo y con qué motivo se obtiene del historial. Las sanciones no se borran: revocar completa los tres campos de revocación. Las reglas de strikes y suspensión están en [Sanciones](reglas-sistema.md#sanciones).
+Un reclamo genera como máximo una sanción. `usuario_id` repite el creador del reclamo para consultar directamente las sanciones de un usuario. Quién rechazó el reclamo y con qué motivo se obtiene del historial. Las sanciones no se borran: revocar completa los tres campos de revocación. Las reglas de suspensión están en [Sanciones](reglas-sistema.md#sanciones).
 
 ## Convenciones estructurales
 

@@ -15,7 +15,6 @@ import '../validaciones.dart';
 import '../widgets/mensaje_error.dart';
 import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
-import '../widgets/banner_sanciones.dart';
 
 
 class CrearReclamoPage extends StatefulWidget {
@@ -405,11 +404,6 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Reemplaza las tarjetas anteriores por esto:
-                      BannerSanciones(
-                        sancionesActivas: 1, // Aquí después conectas la variable real que traiga el backend (ej: _sancionesActivas)
-                        estaSuspendido: suspendido,
-                      ),
                       // 1. AVISO SI ESTÁ SUSPENDIDO POR SANCIONES
                       if (suspendido) ...[
                         Card(

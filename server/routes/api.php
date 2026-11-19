@@ -6,6 +6,7 @@ use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReclamoTrabajoController;
 use App\Http\Controllers\ReclamoTrabajoListadoController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\SancionController;
 use App\Http\Controllers\SesionController;
 use App\Http\Controllers\TipoReclamoController;
 use App\Http\Controllers\UsuarioActualController;
@@ -58,5 +59,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
         Route::get('/admin/reclamos/{reclamo}', [ReclamoAdminController::class, 'show'])->name('admin.reclamos.show');
         Route::get('/admin/tipos-reclamo', [TipoReclamoController::class, 'adminIndex'])->name('admin.tipos-reclamo.index');
         Route::get('/admin/usuarios-sancionados', [AdminUsuarioController::class, 'usuariosSancionados'])->name('admin.usuarios-sancionados.index');
+        Route::get('/admin/usuarios/{usuario}/sanciones', [SancionController::class, 'index'])->name('admin.usuarios.sanciones.index');
+        Route::post('/admin/sanciones/{sancion}/revocar', [SancionController::class, 'revocar'])->name('admin.sanciones.revocar');
     });
 });

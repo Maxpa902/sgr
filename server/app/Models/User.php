@@ -66,10 +66,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(Sancion::class, 'usuario_id');
     }
-    public function sancionesActivas()
+    /** Sanciones no revocadas cuya suspensión de 30 días todavía no terminó. */
+    public function sancionesActivas(): HasMany
     {
         return $this->hasMany(Sancion::class, 'usuario_id')
             ->whereNull('revocada_en')
-            ->where('created_at', '>', now()->subDays(180));
+            ->where('created_at', '>', now()->subDays(Sancion::DIAS_SUSPENSION));
     }
 }

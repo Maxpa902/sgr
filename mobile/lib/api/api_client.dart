@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../modelos/reclamo_admin.dart';
 import '../modelos/reclamo_detalle_admin.dart';
+import '../modelos/sancion.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../modelos/usuario.dart';
 import 'api_exception.dart';
@@ -133,6 +134,17 @@ class ApiClient {
         .whereType<Map<String, dynamic>>()
         .map(Usuario.fromJson)
         .toList(growable: false);
+  }
+
+  /// Todas las sanciones de un vecino (activas, terminadas y revocadas).
+  Future<SancionesDeVecino> listarSancionesDeVecino(int usuarioId) async {
+    final json = await _get('/api/admin/usuarios/$usuarioId/sanciones');
+    return SancionesDeVecino.fromJson(json);
+  }
+
+  /// Revoca una sanción; el server recalcula la suspensión del vecino.
+  Future<void> revocarSancion(int sancionId, {required String motivo}) async {
+    await _post('/api/admin/sanciones/$sancionId/revocar', {'motivo': motivo});
   }
 
   /// Un bloque de cuentas filtrado, ordenado por apellido y nombre.

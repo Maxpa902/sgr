@@ -15,7 +15,7 @@ class AdminUsuarioController extends Controller
     public function usuariosSancionados(Request $request): JsonResponse
     {
         // Usamos la relación 'sancionesActivas' que definimos previamente en el modelo User,
-        // la cual cuenta solo las no revocadas de los últimos 180 días.
+        // la cual cuenta solo las no revocadas cuya suspensión de 30 días sigue corriendo.
         $usuarios = User::withCount('sancionesActivas')
             ->has('sancionesActivas', '>', 0) // Solo los que tienen al menos 1 sanción activa
             ->orderByDesc('sanciones_activas_count') // Ordenados de mayor a menor (ej: 2, luego 1)

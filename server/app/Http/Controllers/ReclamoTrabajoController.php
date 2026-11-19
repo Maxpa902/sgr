@@ -164,16 +164,11 @@ class ReclamoTrabajoController extends Controller
             if ($datos['es_falso']) {
                 $usuario = User::whereKey($reclamo->usuario_id)->lockForUpdate()->firstOrFail();
                 Sancion::create(['usuario_id' => $usuario->id, 'reclamo_id' => $reclamo->id]);
-                $vigentes = $usuario->sanciones()
-                    ->whereNull('revocada_en')
-                    ->where('created_at', '>', now()->subDays(180))
-                    ->count();
-                if ($vigentes >= 3) {
-                    $hasta = now()->addDays(30);
-                    if ($usuario->suspendido_hasta === null || $usuario->suspendido_hasta->lt($hasta)) {
-                        $usuario->suspendido_hasta = $hasta;
-                        $usuario->save();
-                    }
+                // Cada reclamo falso suspende 30 días; nunca acorta una suspensión más larga en curso.
+                $hasta = now()->addDays(Sancion::DIAS_SUSPENSION);
+                if ($usuario->suspendido_hasta === null || $usuario->suspendido_hasta->lt($hasta)) {
+                    $usuario->suspendido_hasta = $hasta;
+                    $usuario->save();
                 }
             }
         }, 3);

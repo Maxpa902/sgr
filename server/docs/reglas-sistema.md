@@ -66,12 +66,12 @@ Crear y editar requieren no estar suspendido.
 ## Sanciones
 
 - Un reclamo se marca como **falso** al rechazarlo. Puede hacerlo el admin o el operario responsable. Solo en ese caso se crea una sanción para el creador, en la misma transacción que el cambio de estado. Un rechazo por otros motivos, por ejemplo porque el problema no corresponde a la cooperativa, no sanciona y solo lo hace el admin.
-- Una sanción está vigente si no fue revocada y tiene menos de **180 días**.
-- Al registrar una sanción, si el usuario acumula **tres o más sanciones vigentes**, queda suspendido por **30 días**: se completa `suspendido_hasta`. No se bloquea al primer error.
+- Cada sanción suspende al creador por **30 días** desde el rechazo: se completa `suspendido_hasta`. No hay acumulación ni umbral: el primer reclamo falso ya suspende. Si el usuario ya estaba suspendido, la suspensión pasa a terminar 30 días después del nuevo rechazo, salvo que ya terminara más tarde.
+- Una sanción está activa mientras no fue revocada y no pasaron sus 30 días.
 - Un usuario suspendido conserva las funciones de consulta, pero no puede crear o editar reclamos, votar ni crear, editar o eliminar comentarios. La suspensión termina sola al pasar la fecha. No afecta las funciones de trabajo de un operario.
-- El admin puede revocar una sanción indicando un motivo obligatorio. La sanción se conserva con la fecha, el admin y el motivo de la revocación. Si después de revocarla quedan menos de tres sanciones vigentes, se levanta la suspensión en curso.
+- El admin puede revocar una sanción indicando un motivo obligatorio. La sanción se conserva con la fecha, el admin y el motivo de la revocación. Después se recalcula la suspensión con las sanciones que siguen activas: si no queda ninguna, se levanta; si queda otra, dura hasta que termine la más reciente.
 - Los votos `desmiente` de la comunidad no generan sanciones por sí mismos.
-- Por ahora los plazos y el umbral son fijos. Pueden pasar a configuración si hace falta ajustarlos.
+- Por ahora el plazo de 30 días es fijo. Puede pasar a configuración si hace falta ajustarlo.
 
 ## Operarios
 

@@ -347,9 +347,7 @@ class ContenidoDetalleReclamo extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      reclamo.sancionesActivasCount >= 3
-                          ? 'Usuario suspendido por reportes falsos activos.'
-                          : 'Vecino en riesgo: ${reclamo.sancionesActivasCount} de 3 reportes falsos (a ${3-reclamo.sancionesActivasCount} de suspensión).',
+                      'Vecino suspendido por un reclamo falso.',
                       style: TextStyle(
                         color: Colors.orange.shade900,
                         fontWeight: FontWeight.w600,

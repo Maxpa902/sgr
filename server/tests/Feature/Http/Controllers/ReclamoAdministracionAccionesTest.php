@@ -67,22 +67,32 @@ class ReclamoAdministracionAccionesTest extends TestCase
         $this->postJson("/api/reclamos/{$resuelto->id}/rechazar", ['observacion' => 'Motivo', 'es_falso' => false])->assertStatus(409);
     }
 
-    public function test_rechazo_por_falso_sanciona_y_suspenden_tres_vigentes(): void
+    public function test_el_primer_rechazo_por_falso_sanciona_y_suspende_30_dias(): void
     {
+        $this->travelTo('2026-11-19 12:00:00');
         EstadoReclamo::firstOrCreate(['nombre' => 'rechazado']);
-        $admin = User::factory()->create(['rol' => 'admin']);
-        $creador = User::factory()->create();
-        Sanctum::actingAs($admin);
+        $creador = User::factory()->create(['rol' => 'ciudadano']);
+        $reclamo = Reclamo::factory()->create(['usuario_id' => $creador->id]);
+        Sanctum::actingAs(User::factory()->create(['rol' => 'admin']));
 
-        for ($i = 0; $i < 3; $i++) {
-            $reclamo = Reclamo::factory()->create(['usuario_id' => $creador->id]);
-            $this->postJson("/api/reclamos/{$reclamo->id}/rechazar", ['observacion' => 'Es falso', 'es_falso' => true])->assertOk();
-            $this->assertSame($i + 1, Sancion::where('usuario_id', $creador->id)->count());
-            if ($i < 2) {
-                $this->assertNull($creador->fresh()->suspendido_hasta);
-            }
-        }
-        $this->assertNotNull($creador->fresh()->suspendido_hasta);
-        $this->assertEqualsWithDelta(now()->addDays(30)->timestamp, $creador->fresh()->suspendido_hasta->timestamp, 5);
+        $respuesta = $this->postJson("/api/reclamos/{$reclamo->id}/rechazar", ['observacion' => 'Es falso', 'es_falso' => true]);
+
+        $respuesta->assertOk();
+        $this->assertSame(1, Sancion::where('usuario_id', $creador->id)->where('reclamo_id', $reclamo->id)->count());
+        $this->assertSame('2026-12-19 12:00:00', $creador->fresh()->suspendido_hasta->format('Y-m-d H:i:s'));
+    }
+
+    public function test_otro_rechazo_por_falso_durante_la_suspension_la_extiende_30_dias_desde_ese_rechazo(): void
+    {
+        $this->travelTo('2026-11-24 12:00:00');
+        EstadoReclamo::firstOrCreate(['nombre' => 'rechazado']);
+        $creador = User::factory()->create(['rol' => 'ciudadano', 'suspendido_hasta' => '2026-12-19 12:00:00']);
+        $reclamo = Reclamo::factory()->create(['usuario_id' => $creador->id]);
+        Sanctum::actingAs(User::factory()->create(['rol' => 'admin']));
+
+        $respuesta = $this->postJson("/api/reclamos/{$reclamo->id}/rechazar", ['observacion' => 'Es falso', 'es_falso' => true]);
+
+        $respuesta->assertOk();
+        $this->assertSame('2026-12-24 12:00:00', $creador->fresh()->suspendido_hasta->format('Y-m-d H:i:s'));
     }
 }
