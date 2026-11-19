@@ -32,10 +32,13 @@ Route::post('/login', [SesionController::class, 'store'])
 Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function () {
     Route::post('/logout', [SesionController::class, 'destroy'])->name('sesion.destroy');
     Route::get('/usuario', [UsuarioActualController::class, 'show'])->name('usuario.show');
+    Route::match(['put', 'patch'], '/usuario', [UsuarioActualController::class, 'update'])->name('usuario.update');
     Route::get('/tipos-reclamo', [TipoReclamoController::class, 'index'])->name('tipos-reclamo.index');
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
 
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
+    Route::match(['put', 'patch'], '/reclamos/{reclamo}', [ReclamoController::class, 'update'])->name('reclamos.update');
+    Route::delete('/reclamos/{reclamo}', [ReclamoController::class, 'destroy'])->name('reclamos.destroy');
     Route::get('/reclamos/{reclamo}/votos', [VotoController::class, 'index'])->name('reclamos.votos.index');
     Route::post('/reclamos/{reclamo}/votar', [VotoController::class, 'store'])
         ->middleware('rol:ciudadano,empleado')->name('reclamos.votar');
