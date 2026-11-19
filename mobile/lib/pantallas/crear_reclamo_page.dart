@@ -392,6 +392,8 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
   Widget build(BuildContext context) {
     final bool suspendido = _estaSuspendido;
     final bool deshabilitado = _enviando || _alcanzoLimiteReclamos || suspendido;
+    final usuario = widget.sesion.usuario;
+    final sancionesCount = usuario?.sancionesActivas ?? 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nuevo Reclamo')),
@@ -405,12 +407,14 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Reemplaza las tarjetas anteriores por esto:
-                      BannerSanciones(
-                        sancionesActivas: 1, // Aquí después conectas la variable real que traiga el backend (ej: _sancionesActivas)
-                        estaSuspendido: suspendido,
-                      ),
-                      // 1. AVISO SI ESTÁ SUSPENDIDO POR SANCIONES
+                      if (sancionesCount > 0 || suspendido) ...[
+                        BannerSanciones(
+                          sancionesActivas: sancionesCount,
+                          estaSuspendido: suspendido,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       if (suspendido) ...[
                         Card(
                           color: Colors.red.shade50,

@@ -60,22 +60,49 @@ class Sesion extends ChangeNotifier {
     cursor: cursor,
   );
 
+
 /// Lista reclamos para el panel de admin a través de la sesión.
   Future<PaginaReclamosAdmin> listarReclamosAdmin({
     String? busqueda,
     String? estado,
     int? tipoId,
     bool urgentes = false,
+    bool incluirBajas = false,
     String? cursor,
-  }) async {
-    return api.listarReclamosAdmin(
+  }) {
+    return _api.listarReclamosAdmin(
       busqueda: busqueda,
       estado: estado,
       tipoId: tipoId,
       urgentes: urgentes,
+      incluirBajas: incluirBajas,
       cursor: cursor,
     );
   }
+
+  Future<PaginaUsuarios> listarUsuariosAdmin({
+    String? busqueda,
+    String? rol,
+    String? estado,
+    String? cursor,
+  }) => _api.listarUsuariosAdmin(
+    busqueda: busqueda,
+    rol: rol,
+    estado: estado,
+    cursor: cursor,
+  );
+
+  Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) =>
+      _api.actualizarCuenta(usuarioId, activo: activo, rol: rol);
+
+  Future<void> crearCategoria({required String nombre, String? descripcion, String? icono}) =>
+      _api.crearCategoria(nombre: nombre, descripcion: descripcion, icono: icono);
+
+  Future<void> actualizarCategoria(int id, {required String nombre, String? descripcion, String? icono, bool? activo}) =>
+      _api.actualizarCategoria(id, nombre: nombre, descripcion: descripcion, icono: icono, activo: activo);
+
+  Future<void> toggleActivoCategoria(int id, bool activo) =>
+      _api.toggleActivoCategoria(id, activo);
 
   Future<ReclamoDetalleAdmin> obtenerReclamoAdmin(int id) =>
       _api.obtenerReclamoAdmin(id);

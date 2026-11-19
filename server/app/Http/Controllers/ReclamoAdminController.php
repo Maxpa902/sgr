@@ -20,6 +20,7 @@ class ReclamoAdminController extends Controller
             'estado' => ['nullable', 'string', Rule::exists('estados_reclamo', 'nombre')],
             'tipo' => ['nullable', 'integer', Rule::exists('tipos_reclamo', 'id')],
             'urgentes' => ['nullable', 'boolean'],
+            'incluir_bajas' => ['nullable', 'boolean'],
             'cursor' => ['nullable', 'string'],
         ]);
 
@@ -30,6 +31,10 @@ class ReclamoAdminController extends Controller
                 'votos as desmentidas_count' => fn(Builder $q) => $q->where('valor', 'desmiente'),
             ]);
 
+
+        if ($request->boolean('incluir_bajas')) {
+            $query->withTrashed();
+        }
         // FILTRO DE URGENTES BLINDADO PARA SQLITE Y LARAVEL
         if ($request->boolean('urgentes')) {
             $query->whereColumn(

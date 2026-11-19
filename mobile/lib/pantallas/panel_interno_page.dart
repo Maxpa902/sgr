@@ -7,6 +7,8 @@ import '../widgets/componentes_ui.dart';
 import 'cuenta_page.dart';
 import 'reclamos_admin_page.dart';
 import 'usuarios_page.dart';
+import 'admin_categorias_page.dart';
+
 
 /// Pantalla inicial para los roles que gestionan o atienden reclamos.
 class PanelInternoPage extends StatelessWidget {
@@ -139,7 +141,7 @@ class _VistaAdmin extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Consulta cuentas y reclamos del sistema.',
+            'Gestioná cuentas, reclamos y categorías del sistema.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: context.theme.colors.mutedForeground,
             ),
@@ -175,7 +177,7 @@ class _VistaAdmin extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'Consultá las cuentas registradas',
+                            'Creá, editá o activá cuentas del sistema',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: context.theme.colors.mutedForeground,
@@ -224,6 +226,54 @@ class _VistaAdmin extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             'Consultá los reclamos registrados',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: context.theme.colors.mutedForeground,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: context.theme.colors.mutedForeground,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          FCard(
+            child: FTappable(
+              semanticsButton: true,
+              semanticsLabel: 'Categorías',
+              onPress: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      TemaApp(child: AdminCategoriasPage(sesion: sesion)),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.category_outlined,
+                      color: context.theme.colors.foreground,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Categorías',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Creá, editá o desactivá categorías de reclamos',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: context.theme.colors.mutedForeground,

@@ -21,6 +21,7 @@ class TipoReclamoResource extends JsonResource
             'nombre' => $this->nombre,
             'descripcion' => $this->descripcion,
             'icono' => $this->icono,
+            'activo' => (bool) $this->activo,
         ];
     }
 }

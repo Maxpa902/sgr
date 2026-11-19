@@ -168,22 +168,99 @@ class ApiClient {
       proximoCursor: metadata['next_cursor'] as String?,
     );
   }
+  /// Listar usuarios para el panel de administración de cuentas.
+  Future<PaginaUsuarios> listarUsuariosAdmin({
+    String? busqueda,
+    String? rol,
+    String? estado,
+    String? cursor,
+  }) async {
+    final parametros = <String, Object>{};
+    if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
+    if (rol != null) parametros['rol'] = rol;
+    if (estado != null) parametros['estado'] = estado;
+    if (cursor != null) parametros['cursor'] = cursor;
 
+    final json = await _get('/api/admin/usuarios', parametros: parametros);
+    final data = json['data'] as List? ?? const [];
+    final metadata = json['meta'] as Map<String, dynamic>? ?? const {};
+    return PaginaUsuarios(
+      usuarios: data
+          .whereType<Map<String, dynamic>>()
+          .map(Usuario.fromJson)
+          .toList(growable: false),
+      total: (metadata['total'] as num?)?.toInt() ?? data.length,
+      proximoCursor: metadata['next_cursor'] as String?,
+    );
+  }
+
+
+  /// Actualizar el rol o estado de una cuenta (Admin).
+Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async {
+  final datos = <String, dynamic>{
+    if (activo != null) 'activo': activo,
+    if (rol != null) 'rol': rol,
+  };
+  final uri = _uri('/api/usuarios/$usuarioId');
+  await _procesar(
+    _http.patch(
+      uri,
+      headers: _encabezados(conCuerpo: true),
+      body: jsonEncode(datos),
+    ),
+    metodo: 'PATCH',
+    uri: uri,
+  );
+}
+
+  /// Crear una nueva categoría de reclamo (Admin).
+  Future<void> crearCategoria({required String nombre, String? descripcion, String? icono}) async {
+    await _post('/api/admin/tipos-reclamo', {
+      'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (icono != null) 'icono': icono,
+    });
+  }
+
+  /// Actualizar una categoría existente (Admin).
+  Future<void> actualizarCategoria(int id, {required String nombre, String? descripcion, String? icono, bool? activo}) async {
+    // Si usas PUT en tu API:
+    final uri = _uri('/api/admin/tipos-reclamo/$id');
+    await _procesar(
+      _http.put(
+        uri,
+        headers: _encabezados(conCuerpo: true),
+        body: jsonEncode({
+          'nombre': nombre,
+          if (descripcion != null) 'descripcion': descripcion,
+          if (icono != null) 'icono': icono,
+          if (activo != null) 'activo': activo,
+        }),
+      ),
+      metodo: 'PUT',
+      uri: uri,
+    );
+  }
+
+  /// Activar o desactivar una categoría (Admin).
+  Future<void> toggleActivoCategoria(int id, bool activo) async {
+    await _post('/api/admin/tipos-reclamo/$id/activo', {'activo': activo});
+  }
   /// Lista reclamos para el panel de admin, con búsqueda, filtros y cursor.
   Future<PaginaReclamosAdmin> listarReclamosAdmin({
     String? busqueda,
     String? estado,
     int? tipoId,
     bool urgentes = false,
+    bool incluirBajas = false,
     String? cursor,
   }) async {
     final parametros = <String, Object>{};
     if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
     if (estado != null) parametros['estado'] = estado;
     if (tipoId != null) parametros['tipo'] = '$tipoId';
-    if (urgentes)
-      parametros['urgentes'] =
-          '1'; // 👈 NUEVO: Se envía al backend si está activo
+    if (urgentes) parametros['urgentes'] = '1';
+    if (incluirBajas) parametros['incluir_bajas'] = '1';
     if (cursor != null) parametros['cursor'] = cursor;
 
     final json = await _get('/api/admin/reclamos', parametros: parametros);

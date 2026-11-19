@@ -14,18 +14,33 @@ class Usuario {
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
-      id: json['id'] as int,
+      id: (json['id'] as num).toInt(),
       nombre: json['nombre'] as String,
       apellido: json['apellido'] as String,
       email: json['email'] as String,
       rol: json['rol'] as String,
       telefono: json['telefono'] as String?,
-      activo: json['activo'] as bool?,
-      sancionesActivas: json['sanciones_activas_count'] as int? ?? json['sanciones_activas'] as int? ?? 0,
+      activo: _parsearActivo(json['activo']),
+      sancionesActivas:
+          (json['sanciones_activas_count'] as num?)?.toInt() ??
+          (json['sanciones_activas'] as num?)?.toInt() ??
+          0,
       suspendidoHasta: json['suspendido_hasta'] != null
-          ? DateTime.tryParse(json['suspendido_hasta'] as String)
+          ? DateTime.tryParse(json['suspendido_hasta'].toString())
           : null,
     );
+  }
+
+  static bool? _parsearActivo(Object? valor) {
+    if (valor == null) return null;
+    if (valor is bool) return valor;
+    if (valor is num) return valor != 0;
+    if (valor is String) {
+      final normalizado = valor.trim().toLowerCase();
+      if (normalizado == '1' || normalizado == 'true') return true;
+      if (normalizado == '0' || normalizado == 'false') return false;
+    }
+    return null;
   }
 
   final int id;
@@ -37,7 +52,7 @@ class Usuario {
   final int sancionesActivas;
   final DateTime? suspendidoHasta;
 
-  /// `ciudadano`, `empleado` o `admin`, igual que en la base de datos.
+  /// `ciudadano`, `empleado` o `admin`, igual que en la base de datos[cite: 1].
   final String rol;
 
   bool get esOperario => rol == 'empleado';
