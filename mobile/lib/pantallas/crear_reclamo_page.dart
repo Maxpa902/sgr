@@ -15,6 +15,7 @@ import '../validaciones.dart';
 import '../widgets/mensaje_error.dart';
 import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
+import '../widgets/banner_sanciones.dart';
 
 
 class CrearReclamoPage extends StatefulWidget {
@@ -77,6 +78,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
       final resultados = await Future.wait([
         widget.sesion.api.tiposDeReclamo(),
         widget.sesion.misReclamos(),
+        widget.sesion.refrescarUsuario(),
       ]);
 
       final tipos = resultados[0] as List<TipoReclamo>;
@@ -159,7 +161,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
   }
 
   Future<void> _guardarReclamo({bool forzarCreacion = false}) async {
-    if (_enviando || _alcanzoLimiteReclamos) return;
+    if (_enviando || _alcanzoLimiteReclamos || _estaSuspendido) return;
 
     setState(() {
       _error = null;
@@ -404,75 +406,10 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 1. AVISO SI ESTÁ SUSPENDIDO POR SANCIONES
-                      if (suspendido) ...[
-                        Card(
-                          color: Colors.red.shade50,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(color: Colors.red.shade400),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.block,
-                                  color: Colors.red.shade900,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Tu cuenta está suspendida temporalmente para crear reclamos debido a reportes falsos. Podrás volver a publicar más adelante.',
-                                    style: TextStyle(
-                                      color: Colors.red.shade900,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_alcanzoLimiteReclamos) ...[
-                        Card(
-                          color: Colors.amber.shade50,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(color: Colors.amber.shade400),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: Colors.amber.shade900,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Alcanzaste el límite de 3 reclamos activos. Esperá a que se resuelvan para crear uno nuevo.',
-                                    style: TextStyle(
-                                      color: Colors.amber.shade900,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
+                      BannerSanciones(
+                        estaSuspendido: suspendido,
+                        alcanzoLimiteReclamos: _alcanzoLimiteReclamos,
+                      ),
                       DropdownButtonFormField<TipoReclamo>(
                         value: _tipoSeleccionado,
                         decoration: InputDecoration(

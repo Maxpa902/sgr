@@ -128,6 +128,35 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  /// Actualiza los datos personales y opcionalmente la contraseña del usuario logueado.
+  Future<Usuario> actualizarPerfil({
+    required String nombre,
+    required String apellido,
+    required String email,
+    String? telefono,
+    String? passwordActual,
+    String? password,
+    String? passwordConfirmacion,
+  }) async {
+    final cuerpo = <String, Object?>{
+      'nombre': nombre,
+      'apellido': apellido,
+      'email': email,
+      'telefono': telefono,
+    };
+
+    if (password != null && password.isNotEmpty) {
+      cuerpo['password_actual'] = passwordActual;
+      cuerpo['password'] = password;
+      cuerpo['password_confirmation'] = passwordConfirmacion;
+    }
+
+    final json = await _put('/api/usuario', cuerpo);
+    return Usuario.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+
+
   /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
   Future<List<Usuario>> listarUsuariosConSanciones() async {
     final json = await _get('/api/admin/usuarios-sancionados');
@@ -182,22 +211,99 @@ class ApiClient {
       proximoCursor: metadata['next_cursor'] as String?,
     );
   }
+  /// Listar usuarios para el panel de administración de cuentas.
+  Future<PaginaUsuarios> listarUsuariosAdmin({
+    String? busqueda,
+    String? rol,
+    String? estado,
+    String? cursor,
+  }) async {
+    final parametros = <String, Object>{};
+    if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
+    if (rol != null) parametros['rol'] = rol;
+    if (estado != null) parametros['estado'] = estado;
+    if (cursor != null) parametros['cursor'] = cursor;
 
+    final json = await _get('/api/admin/usuarios', parametros: parametros);
+    final data = json['data'] as List? ?? const [];
+    final metadata = json['meta'] as Map<String, dynamic>? ?? const {};
+    return PaginaUsuarios(
+      usuarios: data
+          .whereType<Map<String, dynamic>>()
+          .map(Usuario.fromJson)
+          .toList(growable: false),
+      total: (metadata['total'] as num?)?.toInt() ?? data.length,
+      proximoCursor: metadata['next_cursor'] as String?,
+    );
+  }
+
+
+  /// Actualizar el rol o estado de una cuenta (Admin).
+Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async {
+  final datos = <String, dynamic>{
+    if (activo != null) 'activo': activo,
+    if (rol != null) 'rol': rol,
+  };
+  final uri = _uri('/api/usuarios/$usuarioId');
+  await _procesar(
+    _http.patch(
+      uri,
+      headers: _encabezados(conCuerpo: true),
+      body: jsonEncode(datos),
+    ),
+    metodo: 'PATCH',
+    uri: uri,
+  );
+}
+
+  /// Crear una nueva categoría de reclamo (Admin).
+  Future<void> crearCategoria({required String nombre, String? descripcion, String? icono}) async {
+    await _post('/api/admin/tipos-reclamo', {
+      'nombre': nombre,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (icono != null) 'icono': icono,
+    });
+  }
+
+  /// Actualizar una categoría existente (Admin).
+  Future<void> actualizarCategoria(int id, {required String nombre, String? descripcion, String? icono, bool? activo}) async {
+    // Si usas PUT en tu API:
+    final uri = _uri('/api/admin/tipos-reclamo/$id');
+    await _procesar(
+      _http.put(
+        uri,
+        headers: _encabezados(conCuerpo: true),
+        body: jsonEncode({
+          'nombre': nombre,
+          if (descripcion != null) 'descripcion': descripcion,
+          if (icono != null) 'icono': icono,
+          if (activo != null) 'activo': activo,
+        }),
+      ),
+      metodo: 'PUT',
+      uri: uri,
+    );
+  }
+
+  /// Activar o desactivar una categoría (Admin).
+  Future<void> toggleActivoCategoria(int id, bool activo) async {
+    await _post('/api/admin/tipos-reclamo/$id/activo', {'activo': activo});
+  }
   /// Lista reclamos para el panel de admin, con búsqueda, filtros y cursor.
   Future<PaginaReclamosAdmin> listarReclamosAdmin({
     String? busqueda,
     String? estado,
     int? tipoId,
     bool urgentes = false,
+    bool incluirBajas = false,
     String? cursor,
   }) async {
     final parametros = <String, Object>{};
     if (busqueda != null && busqueda.isNotEmpty) parametros['q'] = busqueda;
     if (estado != null) parametros['estado'] = estado;
     if (tipoId != null) parametros['tipo'] = '$tipoId';
-    if (urgentes)
-      parametros['urgentes'] =
-          '1'; // 👈 NUEVO: Se envía al backend si está activo
+    if (urgentes) parametros['urgentes'] = '1';
+    if (incluirBajas) parametros['incluir_bajas'] = '1';
     if (cursor != null) parametros['cursor'] = cursor;
 
     final json = await _get('/api/admin/reclamos', parametros: parametros);
@@ -314,10 +420,12 @@ class ApiClient {
         if (tipos != null) 'tipos[]': [for (final tipo in tipos) '$tipo'],
       },
     );
-    return [
-      for (final reclamo in json['data'] as List)
-        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
-    ];
+
+        return [
+    for (final reclamo in json['data'] as List)
+      _reclamoDesdeJson(reclamo as Map<String, dynamic>),
+  ];
+
   }
 
   /// Devuelve los reclamos creados por el usuario autenticado o en los que participó.
@@ -325,7 +433,7 @@ class ApiClient {
     final json = await _get('/api/reclamos', parametros: {'mis_reclamos': '1'});
     return [
       for (final reclamo in json['data'] as List)
-        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
+       _reclamoDesdeJson(reclamo as Map<String, dynamic>),
     ];
   }
 
@@ -361,7 +469,53 @@ class ApiClient {
       uri: uri,
     );
 
-    return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
+    return _reclamoDesdeJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<ReclamoMapa> editarReclamo({
+    required int id,
+    required String titulo,
+    required String descripcion,
+    required double latitud,
+    required double longitud,
+    List<int> fotosEliminar = const [],
+    List<File> nuevasImagenes = const [],
+  }) async {
+    final uri = _uri('/api/reclamos/$id');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_encabezados())
+      ..fields['_method'] = 'PUT'
+      ..fields['titulo'] = titulo
+      ..fields['descripcion'] = descripcion
+      ..fields['latitud'] = '$latitud'
+      ..fields['longitud'] = '$longitud';
+
+    for (var i = 0; i < fotosEliminar.length; i++) {
+      request.fields['fotos_eliminar[$i]'] = '${fotosEliminar[i]}';
+    }
+
+    for (final imagen in nuevasImagenes) {
+      request.files.add(
+        await http.MultipartFile.fromPath('fotos[]', imagen.path),
+      );
+    }
+
+    final response = await _procesar(
+      http.Response.fromStream(await request.send()),
+      metodo: 'PUT',
+      uri: uri,
+    );
+
+    return _reclamoDesdeJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> eliminarReclamo(int id) async {
+    final uri = _uri('/api/reclamos/$id');
+    await _procesar(
+      _http.delete(uri, headers: _encabezados()),
+      metodo: 'DELETE',
+      uri: uri,
+    );
   }
 
   /// Seguimiento público: los cambios de estado, del más viejo al más nuevo.
@@ -425,6 +579,41 @@ class ApiClient {
     );
   }
 
+ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
+    final copia = Map<String, dynamic>.from(json);
+
+    if (copia['fotos'] is List) {
+      copia['fotos'] = [
+        for (final f in copia['fotos'] as List) _normalizarUrlFoto(f.toString()),
+      ];
+    }
+
+    if (copia['fotos_detalle'] is List) {
+      copia['fotos_detalle'] = [
+        for (final f in copia['fotos_detalle'] as List)
+          if (f is Map<String, dynamic>)
+            {
+              'id': f['id'],
+              'url': _normalizarUrlFoto(f['url'].toString()),
+            },
+      ];
+    }
+
+    return ReclamoMapa.fromJson(copia);
+  }
+
+  String _normalizarUrlFoto(String url) {
+    final uriFoto = Uri.tryParse(url);
+    final uriBase = Uri.tryParse(baseUrl);
+    if (uriFoto == null || uriBase == null) return url;
+
+    if (uriFoto.path.startsWith('/storage/')) {
+      return uriBase.replace(path: uriFoto.path).toString();
+    }
+    return url;
+  }
+
+
   Future<Map<String, dynamic>> _get(
     String ruta, {
     Map<String, Object>? parametros,
@@ -449,6 +638,22 @@ class ApiClient {
         body: cuerpo == null ? null : jsonEncode(cuerpo),
       ),
       metodo: 'POST',
+      uri: uri,
+    );
+  }
+
+  Future<Map<String, dynamic>> _put(
+    String ruta, [
+    Map<String, Object?>? cuerpo,
+  ]) {
+    final uri = _uri(ruta);
+    return _procesar(
+      _http.put(
+        uri,
+        headers: _encabezados(conCuerpo: cuerpo != null),
+        body: cuerpo == null ? null : jsonEncode(cuerpo),
+      ),
+      metodo: 'PUT',
       uri: uri,
     );
   }

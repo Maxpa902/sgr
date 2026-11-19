@@ -10,7 +10,7 @@ import '../sesion/sesion.dart';
 import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import 'detalle_reclamo_admin_page.dart';
-import '../widgets/vecinos_sanciones_page.dart';
+
 
 class ReclamosAdminPage extends StatefulWidget {
   const ReclamosAdminPage({super.key, required this.sesion});
@@ -219,137 +219,119 @@ class _ReclamosAdminPageState extends State<ReclamosAdminPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: LayoutPagina(
-        titulo: 'Reclamos',
-        alVolver: () => Navigator.of(context).pop(),
-        superficie: SuperficiePagina.bordeABorde,
-        contenido: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FTextField(
-                            control: FTextFieldControl.managed(
-                              controller: _busqueda,
-                              onChange: _alCambiarBusqueda,
-                            ),
-                            hint: 'Buscar reclamos',
-                            clearable: (value) => value.text.isNotEmpty,
-                            prefixBuilder: (context, style, variants) =>
-                                FTextField.prefixIconBuilder(
-                                  context,
-                                  style,
-                                  variants,
-                                  const Icon(Icons.search),
-                                ),
+    return LayoutPagina(
+      titulo: 'Reclamos',
+      alVolver: () => Navigator.of(context).pop(),
+      superficie: SuperficiePagina.bordeABorde,
+      contenido: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FTextField(
+                          control: FTextFieldControl.managed(
+                            controller: _busqueda,
+                            onChange: _alCambiarBusqueda,
                           ),
+                          hint: 'Buscar reclamos',
+                          clearable: (value) => value.text.isNotEmpty,
+                          prefixBuilder: (context, style, variants) =>
+                              FTextField.prefixIconBuilder(
+                                context,
+                                style,
+                                variants,
+                                const Icon(Icons.search),
+                              ),
                         ),
-                        const SizedBox(width: 8),
-                        Tooltip(
-                          message: 'Filtrar reclamos urgentes (falsos/desmentidos)',
-                          child: Material(
-                            color: _soloUrgentes ? Colors.red.shade100 : Colors.grey.shade100,
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Filtrar reclamos urgentes (falsos/desmentidos)',
+                        child: Material(
+                          color: _soloUrgentes ? Colors.red.shade100 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
+                            onTap: _toggleUrgentes,
                             borderRadius: BorderRadius.circular(8),
-                            child: InkWell(
-                              onTap: _toggleUrgentes,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: _soloUrgentes ? Colors.red.shade400 : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: _soloUrgentes ? Colors.red.shade800 : Colors.grey.shade600,
-                                  size: 22,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _soloUrgentes ? Colors.red.shade400 : Colors.grey.shade300,
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FSelect<String>(
-                            hint: 'Todos los estados',
-                            items: const {
-                              'Todos los estados': 'todos',
-                              ..._estados,
-                            },
-                            control: FSelectControl<String>.lifted(
-                              value: _filtroEstado,
-                              onChange: _cambiarEstado,
-                            ),
-                          ),
-                        ),
-                        if (_tipos.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FSelect<String>(
-                              hint: 'Todas las categorías',
-                              items: {
-                                'Todas las categorías': 'todos',
-                                for (final tipo in _tipos)
-                                  tipo.nombre: '${tipo.id}',
-                              },
-                              control: FSelectControl<String>.lifted(
-                                value: _filtroTipo,
-                                onChange: _cambiarTipo,
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                color: _soloUrgentes ? Colors.red.shade800 : Colors.grey.shade600,
+                                size: 22,
                               ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10, bottom: 4),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _cargandoInicial
-                              ? 'Buscando…'
-                              : '$_total ${_total == 1 ? 'reclamo' : 'reclamos'}',
-                          style: TextStyle(
-                            color: context.theme.colors.mutedForeground,
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FSelect<String>(
+                          hint: 'Todos los estados',
+                          items: const {
+                            'Todos los estados': 'todos',
+                            ..._estados,
+                          },
+                          control: FSelectControl<String>.lifted(
+                            value: _filtroEstado,
+                            onChange: _cambiarEstado,
+                          ),
+                        ),
+                      ),
+                      if (_tipos.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FSelect<String>(
+                            hint: 'Todas las categorías',
+                            items: {
+                              'Todas las categorías': 'todos',
+                              for (final tipo in _tipos)
+                                tipo.nombre: '${tipo.id}',
+                            },
+                            control: FSelectControl<String>.lifted(
+                              value: _filtroTipo,
+                              onChange: _cambiarTipo,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _cargandoInicial
+                            ? 'Buscando…'
+                            : '$_total ${_total == 1 ? 'reclamo' : 'reclamos'}',
+                        style: TextStyle(
+                          color: context.theme.colors.mutedForeground,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              Expanded(child: _contenido(context)),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => TemaApp(
-                child: VecinosSancionesPage(sesion: widget.sesion),
+                  ),
+                ],
               ),
             ),
-          );
-        },
-        backgroundColor: Colors.orange.shade800,
-        foregroundColor: Colors.white,
-        elevation: 3,
-        tooltip: 'Sanciones',
-        child: const Icon(Icons.gavel_rounded, size: 24),
+            Expanded(child: _contenido(context)),
+          ],
+        ),
       ),
     );
   }

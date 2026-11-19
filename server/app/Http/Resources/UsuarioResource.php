@@ -24,6 +24,8 @@ class UsuarioResource extends JsonResource
             'telefono' => $this->telefono,
             'rol' => $this->rol,
             'suspendido_hasta' => $this->suspendido_hasta,
+            'sanciones_activas' => $this->sanciones_activas_count
+                ?? $this->sancionesActivas()->count(),
         ];
     }
 }

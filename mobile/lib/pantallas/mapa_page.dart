@@ -114,16 +114,27 @@ class _MapaPageState extends State<MapaPage> {
   LatLng? _miUbicacion;
   bool _buscandoUbicacion = false;
   int _ultimoPedido = 0;
+  late int _ultimaVersionReclamos;
 
   @override
   void initState() {
     super.initState();
+    _ultimaVersionReclamos = widget.sesion.versionReclamos;
+    widget.sesion.addListener(_alCambiarSesion);
     _cargarTipos();
     _cargarReclamos();
   }
 
+  void _alCambiarSesion() {
+    if (widget.sesion.versionReclamos != _ultimaVersionReclamos) {
+      _ultimaVersionReclamos = widget.sesion.versionReclamos;
+      _cargarReclamos();
+    }
+  }
+
   @override
   void dispose() {
+    widget.sesion.removeListener(_alCambiarSesion);
     _mapa.dispose();
     super.dispose();
   }

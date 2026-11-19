@@ -38,6 +38,12 @@ class ReclamoMapaResource extends JsonResource
             'fotos' => $this->whenLoaded('fotos', function () {
                 return $this->fotos->map(fn ($foto) => asset('storage/' . $foto->ruta));
             }, []),
+            'fotos_detalle' => $this->whenLoaded('fotos', function () {
+                return $this->fotos->map(fn ($foto) => [
+                    'id' => $foto->id,
+                    'url' => asset('storage/' . $foto->ruta),
+                ]);
+            }, []),
             'creado_en' => $this->created_at->toIso8601String(),
         ];
     }
