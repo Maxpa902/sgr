@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
 import '../formato.dart';
 import '../modelos/reclamo_mapa.dart';
+import '../pantallas/editar_reclamo_page.dart';
 import '../sesion/sesion.dart';
 import '../tema/colores.dart';
 import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
-import 'estilos.dart';
 import '../widgets/lista_votantes_sheet.dart';
+import 'estilos.dart';
 
 /// Panel que aparece abajo al tocar un pin, con lo principal del reclamo.
 class ResumenReclamo extends StatefulWidget {
@@ -28,19 +30,21 @@ class ResumenReclamo extends StatefulWidget {
 }
 
 class _ResumenReclamoState extends State<ResumenReclamo> {
+  late ReclamoMapa _reclamo;
   late int _confirmaciones;
   late int _desmentidas;
   bool _votando = false;
+  bool _eliminando = false;
   String? _miVotoActual;
   String? _mensajeNotificacion;
 
   @override
   void initState() {
     super.initState();
-    _confirmaciones = widget.reclamo.confirmaciones;
-    _desmentidas = widget.reclamo.desmentidas;
-    // Carga el voto previo traído desde el servidor
-    _miVotoActual = widget.reclamo.miVoto;
+    _reclamo = widget.reclamo;
+    _confirmaciones = _reclamo.confirmaciones;
+    _desmentidas = _reclamo.desmentidas;
+    _miVotoActual = _reclamo.miVoto;
   }
 
   void _mostrarMensaje(String mensaje) {
@@ -58,7 +62,7 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     });
 
     try {
-      final res = await widget.sesion.votarReclamo(widget.reclamo.id, valor);
+      final res = await widget.sesion.votarReclamo(_reclamo.id, valor);
       if (mounted) {
         final bool votoRetirado = _miVotoActual == valor;
 
@@ -82,10 +86,77 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
       }
     } on ApiException catch (e) {
       _mostrarMensaje(e.mensaje);
-    } catch (e) {
+    } catch (_) {
       _mostrarMensaje('No se pudo registrar tu voto.');
     } finally {
       if (mounted) setState(() => _votando = false);
+    }
+  }
+
+  Future<void> _abrirEdicion() async {
+    final editado = await Navigator.of(context).push<ReclamoMapa>(
+      MaterialPageRoute(
+        builder: (_) => EditarReclamoPage(
+          reclamo: _reclamo,
+          sesion: widget.sesion,
+        ),
+      ),
+    );
+
+    if (editado != null && mounted) {
+      setState(() {
+        _reclamo = editado;
+        _mensajeNotificacion = 'Reclamo actualizado correctamente.';
+      });
+      widget.alVotar?.call();
+    }
+  }
+
+  Future<void> _confirmarBaja(BuildContext contextForui) async {
+    if (_eliminando) return;
+
+    final confirmado = await confirmarAccion(
+      contextForui,
+      titulo: '¿Dar de baja este reclamo?',
+      descripcion:
+          'El reclamo dejará de mostrarse en el mapa y liberará un lugar en tu límite de reclamos activos. Esta acción no se puede deshacer.',
+      textoConfirmar: 'Sí, dar de baja',
+      variante: TipoConfirmacionAccion.destructiva,
+    );
+
+    if (!confirmado || !mounted) return;
+
+    setState(() {
+      _eliminando = true;
+      _mensajeNotificacion = null;
+    });
+
+    try {
+      await widget.sesion.eliminarReclamo(_reclamo.id);
+      if (mounted) {
+        widget.alVotar?.call();
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reclamo dado de baja correctamente.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _eliminando = false;
+          _mensajeNotificacion = e.mensaje;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _eliminando = false;
+          _mensajeNotificacion = 'No se pudo dar de baja el reclamo.';
+        });
+      }
     }
   }
 
@@ -93,22 +164,25 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
     ListaVotantesSheet.mostrar(
       context,
       sesion: widget.sesion,
-      reclamoId: widget.reclamo.id,
+      reclamoId: _reclamo.id,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final reclamo = widget.reclamo;
+    final reclamo = _reclamo;
     final textos = Theme.of(context).textTheme;
     final colorEstado = colorDelEstado(reclamo.estado);
-    final lugar = reclamo.direccion == null
+    final lugar = reclamo.direccion == null || reclamo.direccion!.isEmpty
         ? reclamo.tipo.nombre
         : '${reclamo.tipo.nombre} · ${reclamo.direccion}';
 
+    final usuario = widget.sesion.usuario;
     final esMiReclamoCreado =
-        widget.sesion.usuario?.id != null &&
-        widget.reclamo.usuarioId == widget.sesion.usuario?.id;
+        usuario?.id != null && reclamo.usuarioId == usuario?.id;
+    final puedeEditarOBajar =
+        esMiReclamoCreado && reclamo.estado == 'pendiente';
+    final estaSuspendido = usuario?.estaSuspendido ?? false;
 
     final estaConfirmado = _miVotoActual == 'confirma';
     final estaDesmentido = _miVotoActual == 'desmiente';
@@ -118,180 +192,213 @@ class _ResumenReclamoState extends State<ResumenReclamo> {
 
     return TemaApp(
       conNotificaciones: false,
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Barrita superior de arrastre del modal
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: ColoresApp.borde,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              if (_mensajeNotificacion != null) ...[
-                AvisoEnLinea(
-                  tipo: TipoAviso.informacion,
-                  mensaje: _mensajeNotificacion!,
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: colorEstado,
-                    foregroundColor: Colors.white,
-                    child: Icon(iconoDeCategoria(reclamo.tipo.icono)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(reclamo.titulo, style: textos.titleLarge),
-                        Text(lugar, style: textos.bodyMedium),
-                      ],
+      child: Builder(
+        builder: (contextForui) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: ColoresApp.borde,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
-              if (reclamo.descripcion != null &&
-                  reclamo.descripcion!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(reclamo.descripcion!, style: textos.bodyMedium),
-              ],
-              if (reclamo.fotos.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 180,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: reclamo.fotos.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          reclamo.fotos[index],
-                          fit: BoxFit.cover,
-                          width: 240,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 140,
-                            color: ColoresApp.borde,
-                            child: const Icon(Icons.broken_image),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
                 ),
-              ],
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  EstadoReclamoBadge(estado: reclamo.estado),
-                  Text(
-                    'Cargado ${haceCuanto(reclamo.creadoEn)}',
-                    style: textos.bodyMedium,
+
+                if (_mensajeNotificacion != null) ...[
+                  AvisoEnLinea(
+                    tipo: TipoAviso.informacion,
+                    mensaje: _mensajeNotificacion!,
                   ),
+                  const SizedBox(height: 14),
                 ],
-              ),
-              if (esDestacadoActual) ...[
-                const SizedBox(height: 12),
+
                 Row(
                   children: [
-                    Icon(Icons.star, color: Colors.amber.shade700, size: 20),
-                    const SizedBox(width: 6),
-                    const Expanded(
-                      child: Text('Muchos vecinos confirmaron este reclamo.'),
+                    CircleAvatar(
+                      backgroundColor: colorEstado,
+                      foregroundColor: Colors.white,
+                      child: Icon(iconoDeCategoria(reclamo.tipo.icono)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(reclamo.titulo, style: textos.titleLarge),
+                          Text(lugar, style: textos.bodyMedium),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: (esMiReclamoCreado || _votando)
-                          ? null
-                          : () => _votar('confirma'),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: estaConfirmado
-                            ? ColoresApp.exito
-                            : Colors.transparent,
-                        foregroundColor: estaConfirmado
-                            ? Colors.white
-                            : ColoresApp.exito,
-                        side: BorderSide(
-                          color: esMiReclamoCreado
-                              ? ColoresApp.borde
-                              : ColoresApp.exito,
-                          width: 1.5,
-                        ),
-                      ),
-                      icon: Icon(
-                        estaConfirmado
-                            ? Icons.thumb_up
-                            : Icons.thumb_up_outlined,
-                      ),
-                      label: Text('Confirmar ($_confirmaciones)'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: (esMiReclamoCreado || _votando)
-                          ? null
-                          : () => _votar('desmiente'),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: estaDesmentido
-                            ? ColoresApp.error
-                            : Colors.transparent,
-                        foregroundColor: estaDesmentido
-                            ? Colors.white
-                            : ColoresApp.error,
-                        side: BorderSide(
-                          color: esMiReclamoCreado
-                              ? ColoresApp.borde
-                              : ColoresApp.error,
-                          width: 1.5,
-                        ),
-                      ),
-                      icon: Icon(
-                        estaDesmentido
-                            ? Icons.thumb_down
-                            : Icons.thumb_down_outlined,
-                      ),
-                      label: Text('Desmentir ($_desmentidas)'),
+                if (reclamo.descripcion != null &&
+                    reclamo.descripcion!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(reclamo.descripcion!, style: textos.bodyMedium),
+                ],
+                if (reclamo.fotos.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 180,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: reclamo.fotos.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            reclamo.fotos[index],
+                            fit: BoxFit.cover,
+                            width: 240,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 140,
+                              color: ColoresApp.borde,
+                              child: const Icon(Icons.broken_image),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
-              ),
-              if (_confirmaciones > 0 || _desmentidas > 0) ...[
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => _mostrarListaVotantes(context),
-                    icon: const Icon(Icons.people_alt_outlined, size: 18),
-                    label: const Text('Ver lista de votantes'),
-                  ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    EstadoReclamoBadge(estado: reclamo.estado),
+                    Text(
+                      'Cargado ${haceCuanto(reclamo.creadoEn)}',
+                      style: textos.bodyMedium,
+                    ),
+                  ],
                 ),
+                if (esDestacadoActual) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber.shade700, size: 20),
+                      const SizedBox(width: 6),
+                      const Expanded(
+                        child: Text('Muchos vecinos confirmaron este reclamo.'),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: (esMiReclamoCreado || _votando)
+                            ? null
+                            : () => _votar('confirma'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: estaConfirmado
+                              ? ColoresApp.exito
+                              : Colors.transparent,
+                          foregroundColor: estaConfirmado
+                              ? Colors.white
+                              : ColoresApp.exito,
+                          side: BorderSide(
+                            color: esMiReclamoCreado
+                                ? ColoresApp.borde
+                                : ColoresApp.exito,
+                            width: 1.5,
+                          ),
+                        ),
+                        icon: Icon(
+                          estaConfirmado
+                              ? Icons.thumb_up
+                              : Icons.thumb_up_outlined,
+                        ),
+                        label: Text('Confirmar ($_confirmaciones)'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: (esMiReclamoCreado || _votando)
+                            ? null
+                            : () => _votar('desmiente'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: estaDesmentido
+                              ? ColoresApp.error
+                              : Colors.transparent,
+                          foregroundColor: estaDesmentido
+                              ? Colors.white
+                              : ColoresApp.error,
+                          side: BorderSide(
+                            color: esMiReclamoCreado
+                                ? ColoresApp.borde
+                                : ColoresApp.error,
+                            width: 1.5,
+                          ),
+                        ),
+                        icon: Icon(
+                          estaDesmentido
+                              ? Icons.thumb_down
+                              : Icons.thumb_down_outlined,
+                        ),
+                        label: Text('Desmentir ($_desmentidas)'),
+                      ),
+                    ),
+                  ],
+                ),
+                if (puedeEditarOBajar) ...[
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FButton(
+                          variant: .outline,
+                          prefix: const Icon(Icons.edit_outlined),
+                          onPress: (_eliminando || estaSuspendido)
+                              ? null
+                              : _abrirEdicion,
+                          child: const Text('Editar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FButton(
+                          variant: .destructive,
+                          prefix: const Icon(Icons.delete_outline),
+                          onPress: _eliminando
+                              ? null
+                              : () => _confirmarBaja(contextForui),
+                          child: Text(
+                            _eliminando ? 'Eliminando…' : 'Dar de baja',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_confirmaciones > 0 || _desmentidas > 0) ...[
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => _mostrarListaVotantes(context),
+                      icon: const Icon(Icons.people_alt_outlined, size: 18),
+                      label: const Text('Ver lista de votantes'),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

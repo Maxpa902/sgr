@@ -125,6 +125,35 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
+  /// Actualiza los datos personales y opcionalmente la contraseña del usuario logueado.
+  Future<Usuario> actualizarPerfil({
+    required String nombre,
+    required String apellido,
+    required String email,
+    String? telefono,
+    String? passwordActual,
+    String? password,
+    String? passwordConfirmacion,
+  }) async {
+    final cuerpo = <String, Object?>{
+      'nombre': nombre,
+      'apellido': apellido,
+      'email': email,
+      'telefono': telefono,
+    };
+
+    if (password != null && password.isNotEmpty) {
+      cuerpo['password_actual'] = passwordActual;
+      cuerpo['password'] = password;
+      cuerpo['password_confirmation'] = passwordConfirmacion;
+    }
+
+    final json = await _put('/api/usuario', cuerpo);
+    return Usuario.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  
+
   /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
   Future<List<Usuario>> listarUsuariosConSanciones() async {
     final json = await _get('/api/admin/usuarios-sancionados');
@@ -377,10 +406,12 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
         if (tipos != null) 'tipos[]': [for (final tipo in tipos) '$tipo'],
       },
     );
-    return [
-      for (final reclamo in json['data'] as List)
-        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
-    ];
+    
+        return [
+    for (final reclamo in json['data'] as List)
+      _reclamoDesdeJson(reclamo as Map<String, dynamic>),
+  ];
+
   }
 
   /// Devuelve los reclamos creados por el usuario autenticado o en los que participó.
@@ -388,7 +419,7 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
     final json = await _get('/api/reclamos', parametros: {'mis_reclamos': '1'});
     return [
       for (final reclamo in json['data'] as List)
-        ReclamoMapa.fromJson(reclamo as Map<String, dynamic>),
+       _reclamoDesdeJson(reclamo as Map<String, dynamic>),
     ];
   }
 
@@ -424,7 +455,53 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
       uri: uri,
     );
 
-    return ReclamoMapa.fromJson(response['data'] as Map<String, dynamic>);
+    return _reclamoDesdeJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<ReclamoMapa> editarReclamo({
+    required int id,
+    required String titulo,
+    required String descripcion,
+    required double latitud,
+    required double longitud,
+    List<int> fotosEliminar = const [],
+    List<File> nuevasImagenes = const [],
+  }) async {
+    final uri = _uri('/api/reclamos/$id');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_encabezados())
+      ..fields['_method'] = 'PUT'
+      ..fields['titulo'] = titulo
+      ..fields['descripcion'] = descripcion
+      ..fields['latitud'] = '$latitud'
+      ..fields['longitud'] = '$longitud';
+
+    for (var i = 0; i < fotosEliminar.length; i++) {
+      request.fields['fotos_eliminar[$i]'] = '${fotosEliminar[i]}';
+    }
+
+    for (final imagen in nuevasImagenes) {
+      request.files.add(
+        await http.MultipartFile.fromPath('fotos[]', imagen.path),
+      );
+    }
+
+    final response = await _procesar(
+      http.Response.fromStream(await request.send()),
+      metodo: 'PUT',
+      uri: uri,
+    );
+
+    return _reclamoDesdeJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> eliminarReclamo(int id) async {
+    final uri = _uri('/api/reclamos/$id');
+    await _procesar(
+      _http.delete(uri, headers: _encabezados()),
+      metodo: 'DELETE',
+      uri: uri,
+    );
   }
 
   Future<List<Map<String, dynamic>>> obtenerVotantes(int reclamoId) async {
@@ -444,6 +521,41 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
       usuario: Usuario.fromJson(json['usuario'] as Map<String, dynamic>),
     );
   }
+
+ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
+    final copia = Map<String, dynamic>.from(json);
+
+    if (copia['fotos'] is List) {
+      copia['fotos'] = [
+        for (final f in copia['fotos'] as List) _normalizarUrlFoto(f.toString()),
+      ];
+    }
+
+    if (copia['fotos_detalle'] is List) {
+      copia['fotos_detalle'] = [
+        for (final f in copia['fotos_detalle'] as List)
+          if (f is Map<String, dynamic>)
+            {
+              'id': f['id'],
+              'url': _normalizarUrlFoto(f['url'].toString()),
+            },
+      ];
+    }
+
+    return ReclamoMapa.fromJson(copia);
+  }
+
+  String _normalizarUrlFoto(String url) {
+    final uriFoto = Uri.tryParse(url);
+    final uriBase = Uri.tryParse(baseUrl);
+    if (uriFoto == null || uriBase == null) return url;
+
+    if (uriFoto.path.startsWith('/storage/')) {
+      return uriBase.replace(path: uriFoto.path).toString();
+    }
+    return url;
+  }
+  
 
   Future<Map<String, dynamic>> _get(
     String ruta, {
@@ -469,6 +581,22 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
         body: cuerpo == null ? null : jsonEncode(cuerpo),
       ),
       metodo: 'POST',
+      uri: uri,
+    );
+  }
+
+  Future<Map<String, dynamic>> _put(
+    String ruta, [
+    Map<String, Object?>? cuerpo,
+  ]) {
+    final uri = _uri(ruta);
+    return _procesar(
+      _http.put(
+        uri,
+        headers: _encabezados(conCuerpo: cuerpo != null),
+        body: cuerpo == null ? null : jsonEncode(cuerpo),
+      ),
+      metodo: 'PUT',
       uri: uri,
     );
   }
