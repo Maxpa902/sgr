@@ -21,6 +21,7 @@ import 'crear_reclamo_page.dart';
 import 'cuenta_page.dart';
 import 'detalle_reclamo_vecino_page.dart';
 import 'mis_reclamos_page.dart';
+import '../widgets/ui/notificaciones.dart';
 
 /// Contenedor principal con navegación inferior.
 class PantallaPrincipal extends StatefulWidget {
@@ -367,7 +368,13 @@ class _MapaPageState extends State<MapaPage> {
                       builder: (_) => CrearReclamoPage(sesion: widget.sesion),
                     ),
                   );
-                  if (creado == true) {
+                  if (creado == true && mounted) {
+                    Notificaciones.mostrar(
+                      context,
+                      tipo: TipoNotificacion.exito,
+                      mensaje: 'Reclamo creado con éxito.',
+                      id: 'reclamo-creado',
+                    );
                     _cargarReclamos();
                   }
                 },

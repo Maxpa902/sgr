@@ -19,6 +19,7 @@ import '../modelos/reclamo_mapa.dart';
 import '../tema/tema_app.dart';
 import '../widgets/banner_sanciones.dart';
 import 'detalle_reclamo_vecino_page.dart';
+import '../widgets/ui/notificaciones.dart';
 
 class CrearReclamoPage extends StatefulWidget {
   const CrearReclamoPage({
@@ -188,17 +189,15 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reclamo creado con éxito.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop(true);
         } else {
+          Notificaciones.mostrar(
+            context,
+            tipo: TipoNotificacion.exito,
+            mensaje: 'Reclamo creado con éxito.',
+            id: 'reclamo-creado',
+          );
           _formulario.currentState!.reset();
           setState(() {
             _titulo.clear();
@@ -209,6 +208,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
           });
         }
       }
+
     } on ApiException catch (e) {
       if (!mounted) return;
 
