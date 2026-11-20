@@ -10,6 +10,7 @@ import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import '../widgets/vecinos_sanciones_page.dart';
 import 'crear_cuenta_interna_page.dart';
+import '../widgets/ui/notificaciones.dart';
 
 class UsuariosPage extends StatefulWidget {
   const UsuariosPage({super.key, required this.sesion});
@@ -62,14 +63,18 @@ class _UsuariosPageState extends State<UsuariosPage> {
     return nombreA.compareTo(nombreB);
   }
 
-  void _mostrarMensaje(String mensaje) {
+  void _mostrarMensaje(
+    String mensaje, {
+    TipoNotificacion tipo = TipoNotificacion.informacion,
+    Object? id,
+  }) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger != null) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(mensaje)));
-    }
+    Notificaciones.mostrar(
+      context,
+      tipo: tipo,
+      mensaje: mensaje,
+      id: id,
+    );
   }
 
   Future<void> _crearCuenta() async {
@@ -80,7 +85,11 @@ class _UsuariosPageState extends State<UsuariosPage> {
       ),
     );
     if (creada == true && mounted) {
-      _mostrarMensaje('Cuenta creada correctamente.');
+      _mostrarMensaje(
+        'Cuenta creada correctamente.',
+        tipo: TipoNotificacion.exito,
+        id: 'cuenta-creada',
+      );
       await _recargar();
     }
   }
@@ -97,18 +106,20 @@ class _UsuariosPageState extends State<UsuariosPage> {
       if (!mounted) return;
       _mostrarMensaje(
         nuevoValor ? 'Cuenta activada.' : 'Cuenta desactivada.',
+        tipo: TipoNotificacion.exito,
+        id: 'cuenta-estado',
       );
       await _recargar();
     } on ApiException catch (e) {
       _mostrarMensaje(
         e.statusCode != null ? '(${e.statusCode}) ${e.mensaje}' : e.mensaje,
+        tipo: TipoNotificacion.error,
       );
     } catch (e) {
-      _mostrarMensaje('No se pudo actualizar el estado: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _cambiandoEstado.remove(usuario.id));
-      }
+      _mostrarMensaje(
+        'No se pudo actualizar el estado: $e',
+        tipo: TipoNotificacion.error,
+      );
     }
   }
 

@@ -5,6 +5,7 @@ import '../api/api_exception.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
 import '../widgets/componentes_ui.dart';
+import '../widgets/ui/notificaciones.dart';
 
 enum _FiltroEstadoCategoria { todas, activas, desactivadas }
 
@@ -65,17 +66,18 @@ class _AdminCategoriasPageState extends State<AdminCategoriasPage> {
     });
   }
 
-  void _mostrarMensaje(String mensaje) {
+  void _mostrarMensaje(
+    String mensaje, {
+    TipoNotificacion tipo = TipoNotificacion.error,
+    Object? id,
+  }) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    final tieneScaffold = Scaffold.maybeOf(context) != null;
-    if (messenger != null && tieneScaffold) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(mensaje)));
-      return;
-    }
-    debugPrint('[AdminCategoriasPage] $mensaje');
+    Notificaciones.mostrar(
+      context,
+      tipo: tipo,
+      mensaje: mensaje,
+      id: id,
+    );
   }
 
   IconData _iconoParaClave(String? clave) {
@@ -209,9 +211,13 @@ class _AdminCategoriasPageState extends State<AdminCategoriasPage> {
                               final descLimpia = descCtrl.text.trim();
 
                               if (nombreLimpio.isEmpty) {
-                                _mostrarMensaje('Ingresá un nombre para la categoría.');
-                                return;
-                              }
+                                  _mostrarMensaje(
+                                    'Ingresá un nombre para la categoría.',
+                                    tipo: TipoNotificacion.advertencia,
+                                    id: 'validacion-categoria',
+                                  );
+                                  return;
+                                }
 
                               setStateModal(() => guardando = true);
                               try {
@@ -257,6 +263,13 @@ class _AdminCategoriasPageState extends State<AdminCategoriasPage> {
     );
 
     if (guardado == true && mounted) {
+      _mostrarMensaje(
+        categoriaExistente == null
+            ? 'Categoría creada correctamente.'
+            : 'Categoría actualizada correctamente.',
+        tipo: TipoNotificacion.exito,
+        id: 'categoria-guardada',
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _cargar();
       });
@@ -269,15 +282,21 @@ class _AdminCategoriasPageState extends State<AdminCategoriasPage> {
     setState(() => _cambiandoActivo.add(cat.id));
     try {
       await widget.sesion.toggleActivoCategoria(cat.id, nuevoValor);
-      if (mounted) _cargar();
-    } on ApiException catch (e) {
-      _mostrarMensaje(e.mensaje);
-    } catch (e) {
-      _mostrarMensaje('No se pudo actualizar la categoría: $e');
-    } finally {
       if (mounted) {
-        setState(() => _cambiandoActivo.remove(cat.id));
+        _mostrarMensaje(
+          nuevoValor ? 'Categoría activada.' : 'Categoría desactivada.',
+          tipo: TipoNotificacion.exito,
+          id: 'categoria-estado',
+        );
+        _cargar();
       }
+    } on ApiException catch (e) {
+      _mostrarMensaje(e.mensaje, tipo: TipoNotificacion.error);
+    } catch (e) {
+      _mostrarMensaje(
+        'No se pudo actualizar la categoría: $e',
+        tipo: TipoNotificacion.error,
+      );
     }
   }
 
