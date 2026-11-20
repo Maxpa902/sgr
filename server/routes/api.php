@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', AsegurarCuentaActiva::class])->group(function
     Route::match(['put', 'patch'], '/usuario', [UsuarioActualController::class, 'update'])->name('usuario.update');
     Route::get('/tipos-reclamo', [TipoReclamoController::class, 'index'])->name('tipos-reclamo.index');
     Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
+    Route::get('/reclamos/{reclamo}', [ReclamoController::class, 'show'])->name('reclamos.show');
 
     Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
     Route::match(['put', 'patch'], '/reclamos/{reclamo}', [ReclamoController::class, 'update'])->name('reclamos.update');

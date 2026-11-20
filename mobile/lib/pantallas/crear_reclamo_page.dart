@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -11,12 +12,13 @@ import '../mapa/zona.dart';
 import '../modelos/tipo_reclamo.dart';
 import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
-import '../validaciones.dart';
+import '../widgets/componentes_ui.dart';
+import '../widgets/formulario_reclamo_ui.dart';
 import '../widgets/mensaje_error.dart';
-import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
+import '../tema/tema_app.dart';
 import '../widgets/banner_sanciones.dart';
-
+import 'detalle_reclamo_vecino_page.dart';
 
 class CrearReclamoPage extends StatefulWidget {
   const CrearReclamoPage({
@@ -51,7 +53,6 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
   Map<String, String> _erroresDelServer = {};
 
   int _cantidadReclamosActivos = 0;
-
 
   bool get _alcanzoLimiteReclamos => _cantidadReclamosActivos >= 3;
 
@@ -140,9 +141,7 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
     final punto = await showDialog<LatLng>(
       context: context,
       useSafeArea: false,
-      builder: (context) => _SelectorPuntoMapa(
-        puntoInicial: _ubicacion,
-      ),
+      builder: (context) => _SelectorPuntoMapa(puntoInicial: _ubicacion),
     );
 
     if (punto != null && mounted) {
@@ -361,19 +360,14 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (_) => ResumenReclamo(
-                    reclamo: duplicado,
-                    sesion: widget.sesion,
+                Navigator.of(this.context).pushReplacement<void, void>(
+                  MaterialPageRoute(
+                    builder: (_) => TemaApp(
+                      child: DetalleReclamoVecinoPage(
+                        reclamo: duplicado,
+                        sesion: widget.sesion,
+                      ),
+                    ),
                   ),
                 );
               },
@@ -391,262 +385,179 @@ class _CrearReclamoPageState extends State<CrearReclamoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool suspendido = _estaSuspendido;
-    final bool deshabilitado = _enviando || _alcanzoLimiteReclamos || suspendido;
+    final suspendido = _estaSuspendido;
+    final deshabilitado = _enviando || _alcanzoLimiteReclamos || suspendido;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nuevo Reclamo')),
-      body: SafeArea(
-        child: _cargandoDatos
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formulario,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      BannerSanciones(
-                        estaSuspendido: suspendido,
-                        alcanzoLimiteReclamos: _alcanzoLimiteReclamos,
-                      ),
-                      DropdownButtonFormField<TipoReclamo>(
-                        value: _tipoSeleccionado,
-                        decoration: InputDecoration(
-                          labelText: 'Categoría',
-                          border: const OutlineInputBorder(),
-                          errorText: _erroresDelServer['tipo_id'],
-                        ),
-                        items: _tipos
-                            .map((t) => DropdownMenuItem(
-                                  value: t,
-                                  child: Row(
-                                    children: [
-                                      Icon(iconoDeCategoria(t.icono), size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(t.nombre),
-                                    ],
+    return TemaApp(
+      child: LayoutPagina(
+        titulo: 'Nuevo Reclamo',
+        alVolver: Navigator.of(context).canPop()
+            ? () => Navigator.of(context).pop()
+            : null,
+        superficie: SuperficiePagina.bordeABorde,
+        contenido: SafeArea(
+          top: false,
+          child: _cargandoDatos
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Form(
+                        key: _formulario,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            BannerSanciones(
+                              estaSuspendido: suspendido,
+                              alcanzoLimiteReclamos: _alcanzoLimiteReclamos,
+                            ),
+                            DatosFormularioReclamo(
+                              categoria: Material(
+                                type: MaterialType.transparency,
+                                child: DropdownButtonFormField<TipoReclamo>(
+                                  value: _tipoSeleccionado,
+                                  decoration: InputDecoration(
+                                    labelText: 'Categoría',
+                                    border: const OutlineInputBorder(),
+                                    errorText: _erroresDelServer['tipo_id'],
                                   ),
-                                ))
-                            .toList(),
-                        onChanged: deshabilitado
-                            ? null
-                            : (val) => setState(() {
-                                  _tipoSeleccionado = val;
-                                  _erroresDelServer.remove('tipo_id');
-                                }),
-                        validator: (v) =>
-                            v == null ? 'Seleccioná un tipo de reclamo.' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _titulo,
-                        enabled: !deshabilitado,
-                        decoration: InputDecoration(
-                          labelText: 'Título',
-                          prefixIcon: const Icon(Icons.title_outlined),
-                          border: const OutlineInputBorder(),
-                          errorText: _erroresDelServer['titulo'],
-                        ),
-                        validator: obligatorio('Ingresá un título.'),
-                        onChanged: (_) =>
-                            setState(() => _erroresDelServer.remove('titulo')),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _descripcion,
-                        enabled: !deshabilitado,
-                        decoration: InputDecoration(
-                          labelText: 'Descripción',
-                          prefixIcon: const Icon(Icons.description_outlined),
-                          border: const OutlineInputBorder(),
-                          errorText: _erroresDelServer['descripcion'],
-                        ),
-                        validator: obligatorio('Ingresá una descripción.'),
-                        onChanged: (_) => setState(
-                            () => _erroresDelServer.remove('descripcion')),
-                      ),
-                      const SizedBox(height: 20),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.location_on_outlined),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _ubicacion == null
-                                              ? 'Elegí dónde ocurre el problema'
-                                              : 'Punto seleccionado',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall,
+                                  items: _tipos
+                                      .map(
+                                        (t) => DropdownMenuItem(
+                                          value: t,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                iconoDeCategoria(t.icono),
+                                                size: 20,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(t.nombre),
+                                            ],
+                                          ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _ubicacion == null
-                                              ? 'Podés marcarlo en el mapa sin compartir tu ubicación.'
-                                              : 'Lat. ${_ubicacion!.latitude.toStringAsFixed(5)} · Lon. ${_ubicacion!.longitude.toStringAsFixed(5)}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                onPressed: deshabilitado
-                                    ? null
-                                    : _seleccionarPuntoEnMapa,
-                                icon: const Icon(Icons.map_outlined),
-                                label: Text(
-                                  _ubicacion == null
-                                      ? 'Elegir punto en el mapa'
-                                      : 'Mover punto en el mapa',
+                                      )
+                                      .toList(),
+                                  onChanged: deshabilitado
+                                      ? null
+                                      : (val) => setState(() {
+                                          _tipoSeleccionado = val;
+                                          _erroresDelServer.remove('tipo_id');
+                                        }),
+                                  validator: (v) => v == null
+                                      ? 'Seleccioná un tipo de reclamo.'
+                                      : null,
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed:
-                                    (_obteniendoUbicacion || deshabilitado)
-                                        ? null
-                                        : _obtenerUbicacionActual,
-                                icon: const Icon(Icons.my_location),
-                                label: const Text('Usar mi ubicación actual'),
+                              titulo: _titulo,
+                              descripcion: _descripcion,
+                              habilitado: !deshabilitado,
+                              errores: _erroresDelServer,
+                              alCambiarTitulo: (_) => setState(
+                                () => _erroresDelServer.remove('titulo'),
                               ),
-                              if (_obteniendoUbicacion)
-                                const LinearProgressIndicator(),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              alCambiarDescripcion: (_) => setState(
+                                () => _erroresDelServer.remove('descripcion'),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            UbicacionFormularioReclamo(
+                              titulo: _ubicacion == null
+                                  ? 'Elegí dónde ocurre el problema'
+                                  : 'Punto seleccionado',
+                              descripcion: _ubicacion == null
+                                  ? 'Podés marcarlo en el mapa sin compartir tu ubicación.'
+                                  : 'Lat. ${_ubicacion!.latitude.toStringAsFixed(5)} · Lon. ${_ubicacion!.longitude.toStringAsFixed(5)}',
+                              textoMapa: _ubicacion == null
+                                  ? 'Elegir punto en el mapa'
+                                  : 'Mover punto en el mapa',
+                              alElegirMapa: deshabilitado
+                                  ? null
+                                  : _seleccionarPuntoEnMapa,
+                              alUsarUbicacion:
+                                  (_obteniendoUbicacion || deshabilitado)
+                                  ? null
+                                  : _obtenerUbicacionActual,
+                              cargando: _obteniendoUbicacion,
+                            ),
+                            const SizedBox(height: 16),
+                            SeccionFormularioReclamo(
+                              titulo: 'Adjuntar evidencia fotográfica',
+                              icono: Icons.add_a_photo_outlined,
+                              descripcion:
+                                  'Podés tomar una foto o elegir una de tu galería (opcional).',
+                              contenido: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  const Icon(Icons.add_a_photo_outlined),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                  BotonesFotoReclamo(
+                                    alCamara: deshabilitado
+                                        ? null
+                                        : () => _seleccionarImagen(
+                                            ImageSource.camera,
+                                          ),
+                                    alGaleria: deshabilitado
+                                        ? null
+                                        : () => _seleccionarImagen(
+                                            ImageSource.gallery,
+                                          ),
+                                  ),
+                                  if (_imagen != null) ...[
+                                    const SizedBox(height: 12),
+                                    Stack(
+                                      alignment: Alignment.topRight,
                                       children: [
-                                        Text(
-                                          'Adjuntar evidencia fotográfica',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall,
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Image.file(
+                                            _imagen!,
+                                            height: 160,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Podés tomar una foto o elegir una de tu galería (opcional).',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
+                                        IconButton.filled(
+                                          tooltip: 'Quitar foto',
+                                          icon: const Icon(Icons.close),
+                                          onPressed: deshabilitado
+                                              ? null
+                                              : () => setState(
+                                                  () => _imagen = null,
+                                                ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: deshabilitado
-                                          ? null
-                                          : () => _seleccionarImagen(
-                                                ImageSource.camera,
-                                              ),
-                                      icon: const Icon(
-                                        Icons.camera_alt_outlined,
-                                      ),
-                                      label: const Text('Cámara'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: deshabilitado
-                                          ? null
-                                          : () => _seleccionarImagen(
-                                                ImageSource.gallery,
-                                              ),
-                                      icon: const Icon(
-                                        Icons.photo_library_outlined,
-                                      ),
-                                      label: const Text('Galería'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_imagen != null) ...[
-                                const SizedBox(height: 12),
-                                Stack(
-                                  alignment: Alignment.topRight,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(
-                                        _imagen!,
-                                        height: 160,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    IconButton.filled(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: deshabilitado
-                                          ? null
-                                          : () =>
-                                              setState(() => _imagen = null),
                                     ),
                                   ],
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                            if (_error case final err?) ...[
+                              const SizedBox(height: 16),
+                              MensajeError(err),
                             ],
-                          ),
+                            const SizedBox(height: 24),
+                            FButton(
+                              onPress: deshabilitado ? null : _guardarReclamo,
+                              child: _enviando
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Enviar Reclamo'),
+                            ),
+                          ],
                         ),
                       ),
-                      if (_error case final err?) ...[
-                        const SizedBox(height: 16),
-                        MensajeError(err),
-                      ],
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: deshabilitado ? null : _guardarReclamo,
-                        child: _enviando
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Enviar Reclamo'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -704,8 +615,7 @@ class _SelectorPuntoMapaState extends State<_SelectorPuntoMapa> {
                           bounds: ZonaDelMapa.limites,
                         ),
                         interactionOptions: const InteractionOptions(
-                          flags: InteractiveFlag.all &
-                              ~InteractiveFlag.rotate,
+                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                         ),
                         onPositionChanged: (camera, hasGesture) {
                           if (hasGesture) {

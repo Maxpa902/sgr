@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
+import 'componentes_ui.dart';
 
 import '../api/api_exception.dart';
 import '../formato.dart';
@@ -16,10 +18,12 @@ class ComentariosReclamo extends StatefulWidget {
     super.key,
     required this.sesion,
     required this.reclamoId,
+    this.pantallaCompleta = false,
   });
 
   final Sesion sesion;
   final int reclamoId;
+  final bool pantallaCompleta;
 
   @override
   State<ComentariosReclamo> createState() => _ComentariosReclamoState();
@@ -32,6 +36,9 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
   bool _falloLaCarga = false;
   bool _enviando = false;
   String? _error;
+  Comentario? _editando;
+  String _borrador = '';
+  final _foco = FocusNode();
 
   @override
   void initState() {
@@ -42,6 +49,7 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
   @override
   void dispose() {
     _nuevo.dispose();
+    _foco.dispose();
     super.dispose();
   }
 
@@ -113,6 +121,16 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
   }
 
   Future<void> _editar(Comentario comentario) async {
+    if (widget.pantallaCompleta) {
+      setState(() {
+        if (_editando == null) _borrador = _nuevo.text;
+        _editando = comentario;
+        _nuevo.text = comentario.contenido;
+        _error = null;
+      });
+      _foco.requestFocus();
+      return;
+    }
     final texto = await showDialog<String>(
       context: context,
       builder: (_) => _DialogoEditar(textoInicial: comentario.contenido),
@@ -124,23 +142,31 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
   }
 
   Future<void> _borrar(Comentario comentario) async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Borrar comentario?'),
-        content: const Text('No se puede deshacer.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Borrar'),
-          ),
-        ],
-      ),
-    );
+    final confirmado = widget.pantallaCompleta
+        ? await confirmarAccion(
+            context,
+            titulo: '¿Borrar comentario?',
+            descripcion: 'No se puede deshacer.',
+            textoConfirmar: 'Borrar',
+            variante: TipoConfirmacionAccion.destructiva,
+          )
+        : await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('¿Borrar comentario?'),
+              content: const Text('No se puede deshacer.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Borrar'),
+                ),
+              ],
+            ),
+          );
     if (confirmado != true) return;
     await _ejecutar(() => widget.sesion.api.borrarComentario(comentario.id));
   }
@@ -149,6 +175,8 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     final datos = _datos;
+
+    if (widget.pantallaCompleta) return _pantalla(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -226,6 +254,214 @@ class _ComentariosReclamoState extends State<ComentariosReclamo> {
     );
   }
 
+  Future<void> _guardarEdicion() async {
+    final comentario = _editando;
+    final texto = _nuevo.text.trim();
+    if (comentario == null) return;
+    if (texto.isEmpty) {
+      setState(() => _error = 'Escribí el comentario.');
+      return;
+    }
+    final guardado = await _ejecutar(
+      () => widget.sesion.api.editarComentario(comentario.id, texto),
+    );
+    if (guardado && mounted) _cancelarEdicion();
+  }
+
+  void _cancelarEdicion() {
+    setState(() {
+      _editando = null;
+      _nuevo.text = _borrador;
+      _borrador = '';
+      _error = null;
+    });
+    _foco.unfocus();
+  }
+
+  Widget _pantalla(BuildContext context) {
+    final datos = _datos;
+    if (datos == null && _cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (datos == null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('No se pudieron cargar los comentarios.'),
+            TextButton(onPressed: _cargar, child: const Text('Reintentar')),
+          ],
+        ),
+      );
+    }
+    return Column(
+      children: [
+        Expanded(
+          child: datos.comentarios.isEmpty
+              ? ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 32,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ColoresApp.superficie,
+                        border: Border.all(color: ColoresApp.borde),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          const CircleAvatar(
+                            radius: 24,
+                            backgroundColor: ColoresApp.principalSuave,
+                            foregroundColor: ColoresApp.principal,
+                            child: Icon(Icons.chat_bubble_outline),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Todavía no hay comentarios.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            datos.puedeComentar
+                                ? 'Compartí información que pueda ayudar a tus vecinos.'
+                                : 'Los aportes de los vecinos aparecerán acá.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: ColoresApp.textoSecundario),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!datos.puedeComentar && _editando == null)
+                      _avisoBloqueo(datos.motivoBloqueo),
+                  ],
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  itemCount: datos.comentarios.length +
+                      (!datos.puedeComentar && _editando == null ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == datos.comentarios.length) {
+                      return _avisoBloqueo(datos.motivoBloqueo);
+                    }
+                    final c = datos.comentarios[index];
+                    final primero = index == 0;
+                    final ultimo = index == datos.comentarios.length - 1;
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: ColoresApp.superficie,
+                        border: Border.all(color: ColoresApp.borde),
+                        borderRadius: BorderRadius.vertical(
+                          top: primero
+                              ? const Radius.circular(16)
+                              : Radius.zero,
+                          bottom: ultimo
+                              ? const Radius.circular(16)
+                              : Radius.zero,
+                        ),
+                      ),
+                      child: _TarjetaComentario(
+                        comentario: c,
+                        superficiePlana: true,
+                        puedeModificar:
+                            c.esMio &&
+                            datos.puedeModificarPropios &&
+                            !_enviando,
+                        alEditar: () => _editar(c),
+                        alBorrar: () => _borrar(c),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        if (datos.puedeComentar || _editando != null) SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (datos.puedeComentar || _editando != null) ...[
+                  FTextField.multiline(
+                    control: FTextFieldControl.managed(controller: _nuevo),
+                    focusNode: _foco,
+                    minLines: 1,
+                    maxLines: 3,
+                    maxLength: 1000,
+                    enabled: !_enviando,
+                    hint: _editando == null
+                        ? 'Escribí un comentario'
+                        : 'Editar comentario',
+                    description: _editando == null
+                        ? Text(_quedan(datos.disponibles))
+                        : null,
+                    error: _error == null ? null : Text(_error!),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (_editando != null)
+                          FButton(
+                            variant: .ghost,
+                            mainAxisSize: MainAxisSize.min,
+                            onPress: _enviando ? null : _cancelarEdicion,
+                            child: const Text('Cancelar'),
+                          ),
+                        FButton(
+                          mainAxisSize: MainAxisSize.min,
+                          onPress: _enviando
+                              ? null
+                              : (_editando == null ? _publicar : _guardarEdicion),
+                          child: Text(
+                            _enviando
+                                ? 'Enviando…'
+                                : (_editando == null
+                                      ? 'Comentar'
+                                      : 'Guardar cambios'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _avisoBloqueo(String? motivo) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.info_outline, size: 18, color: ColoresApp.textoSecundario),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            motivo ?? 'No podés comentar en este reclamo.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: ColoresApp.textoSecundario,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   static String _quedan(int disponibles) => disponibles == 1
       ? 'Te queda 1 comentario en este reclamo'
       : 'Te quedan $disponibles comentarios en este reclamo';
@@ -238,12 +474,14 @@ class _TarjetaComentario extends StatelessWidget {
     required this.puedeModificar,
     required this.alEditar,
     required this.alBorrar,
+    this.superficiePlana = false,
   });
 
   final Comentario comentario;
   final bool puedeModificar;
   final VoidCallback alEditar;
   final VoidCallback alBorrar;
+  final bool superficiePlana;
 
   @override
   Widget build(BuildContext context) {
@@ -254,13 +492,19 @@ class _TarjetaComentario extends StatelessWidget {
     ].join(' · ');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 12),
-      decoration: BoxDecoration(
-        color: ColoresApp.fondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: ColoresApp.borde),
-      ),
+      margin: superficiePlana
+          ? EdgeInsets.zero
+          : const EdgeInsets.only(bottom: 8),
+      padding: superficiePlana
+          ? const EdgeInsets.fromLTRB(16, 8, 8, 16)
+          : const EdgeInsets.fromLTRB(12, 8, 4, 12),
+      decoration: superficiePlana
+          ? null
+          : BoxDecoration(
+              color: ColoresApp.fondo,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: ColoresApp.borde),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -271,7 +515,7 @@ class _TarjetaComentario extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: comentario.autor,
+                        text: comentario.esMio ? 'Vos' : comentario.autor,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       TextSpan(

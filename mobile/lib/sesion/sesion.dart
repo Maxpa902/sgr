@@ -178,8 +178,11 @@ class Sesion extends ChangeNotifier {
   }
 
   /// Envía un voto (confirma/desmiente) para un reclamo.
-  Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) {
-    return _api.votarReclamo(reclamoId, valor);
+  Future<Map<String, dynamic>> votarReclamo(int reclamoId, String valor) async {
+    final resultado = await _api.votarReclamo(reclamoId, valor);
+    _versionReclamos++;
+    notifyListeners();
+    return resultado;
   }
 
   /// Al abrir la app: si hay un token guardado, le pregunta al server si

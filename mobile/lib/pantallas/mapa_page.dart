@@ -19,6 +19,7 @@ import '../widgets/componentes_ui.dart';
 import '../widgets/mensaje_error.dart';
 import 'crear_reclamo_page.dart';
 import 'cuenta_page.dart';
+import 'detalle_reclamo_vecino_page.dart';
 import 'mis_reclamos_page.dart';
 
 /// Contenedor principal con navegación inferior.
@@ -210,20 +211,23 @@ class _MapaPageState extends State<MapaPage> {
     _cargarReclamos();
   }
 
-  void _mostrarResumen(ReclamoMapa reclamo) {
+  Future<void> _mostrarResumen(ReclamoMapa reclamo) async {
     if (_filtrosDesplegados) {
       setState(() => _filtrosDesplegados = false);
     }
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => ResumenReclamo(
-        reclamo: reclamo,
-        sesion: widget.sesion,
-        alVotar: _cargarReclamos,
+    final verDetalle = await ResumenReclamo(reclamo: reclamo).mostrar(context);
+    if (verDetalle != true || !mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => TemaApp(
+          child: DetalleReclamoVecinoPage(
+            reclamo: reclamo,
+            sesion: widget.sesion,
+          ),
+        ),
       ),
     );
+    if (mounted) _cargarReclamos();
   }
 
   Future<void> _irAMiUbicacion() async {
@@ -343,40 +347,54 @@ class _MapaPageState extends State<MapaPage> {
           ),
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: 'crear_reclamo',
-            onPressed: () async {
-              if (_filtrosDesplegados) {
-                setState(() => _filtrosDesplegados = false);
-              }
-              final creado = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(
-                  builder: (_) => CrearReclamoPage(sesion: widget.sesion),
-                ),
-              );
-              if (creado == true) {
-                _cargarReclamos();
-              }
-            },
-            tooltip: 'Crear Reclamo',
-            child: const Icon(Icons.add),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.small(
-            heroTag: 'mi_ubicacion',
-            onPressed: _buscandoUbicacion ? null : _irAMiUbicacion,
-            tooltip: 'Mi ubicación',
-            child: _buscandoUbicacion
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.my_location),
-          ),
-        ],
+      floatingActionButton: TemaApp(
+        conNotificaciones: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 56,
+              child: FButton.icon(
+                variant: .primary,
+                semanticsLabel: 'Crear reclamo',
+                semanticsTooltip: 'Crear reclamo',
+                onPress: () async {
+                  if (_filtrosDesplegados) {
+                    setState(() => _filtrosDesplegados = false);
+                  }
+                  final creado = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => CrearReclamoPage(sesion: widget.sesion),
+                    ),
+                  );
+                  if (creado == true) {
+                    _cargarReclamos();
+                  }
+                },
+                child: const Icon(Icons.add),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox.square(
+              dimension: 48,
+              child: FButton.icon(
+                variant: .primary,
+                semanticsLabel: 'Mi ubicación',
+                semanticsTooltip: 'Mi ubicación',
+                onPress: _buscandoUbicacion ? null : _irAMiUbicacion,
+                child: _buscandoUbicacion
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.my_location),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

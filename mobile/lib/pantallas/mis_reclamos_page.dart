@@ -3,13 +3,13 @@ import 'package:forui/forui.dart';
 
 import '../api/api_exception.dart';
 import '../mapa/estilos.dart';
-import '../mapa/resumen_reclamo.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../sesion/sesion.dart';
 import '../tema/tema_app.dart';
 import '../widgets/componentes_ui.dart';
 import '../widgets/deslizar_para_actualizar.dart';
 import 'cuenta_page.dart';
+import 'detalle_reclamo_vecino_page.dart';
 
 class MisReclamosPage extends StatefulWidget {
   const MisReclamosPage({super.key, required this.sesion});
@@ -46,17 +46,18 @@ class _MisReclamosPageState extends State<MisReclamosPage> {
     }
   }
 
-  void _mostrarDetalle(ReclamoMapa reclamo) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => ResumenReclamo(
-        reclamo: reclamo,
-        sesion: widget.sesion,
-        alVotar: _reintentar,
+  Future<void> _mostrarDetalle(ReclamoMapa reclamo) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => TemaApp(
+          child: DetalleReclamoVecinoPage(
+            reclamo: reclamo,
+            sesion: widget.sesion,
+          ),
+        ),
       ),
     );
+    if (mounted) _reintentar();
   }
 
   @override

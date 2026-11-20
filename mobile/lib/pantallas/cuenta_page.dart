@@ -16,7 +16,8 @@ class CuentaPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: sesion,
       builder: (context, _) {
-        final usuario = sesion.usuario!;
+        final usuario = sesion.usuario;
+        if (usuario == null) return const SizedBox.shrink();
         final telefono = usuario.telefono?.trim();
         final nombre = usuario.nombre.trim();
         final apellido = usuario.apellido.trim();

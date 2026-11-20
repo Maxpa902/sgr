@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Models\Reclamo;
+use App\Models\EstadoReclamo;
 use App\Models\TipoReclamo;
 use App\Models\User;
 use App\Models\Voto;
@@ -13,6 +14,64 @@ use Tests\TestCase;
 class ReclamoControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_detail_requires_authentication_and_respects_visibility_and_deletion(): void
+    {
+        $autor = User::factory()->create();
+        $privado = Reclamo::factory()->privado()->create(['usuario_id' => $autor->id]);
+        $publico = Reclamo::factory()->create();
+        $borrado = Reclamo::factory()->create();
+        $borrado->delete();
+
+        $this->getJson("/api/reclamos/{$publico->id}")->assertUnauthorized();
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson("/api/reclamos/{$privado->id}")->assertNotFound();
+        $this->getJson("/api/reclamos/{$borrado->id}")->assertNotFound();
+        $this->getJson("/api/reclamos/{$publico->id}")->assertOk()->assertJsonPath('data.id', $publico->id);
+        Sanctum::actingAs($autor);
+        $this->getJson("/api/reclamos/{$privado->id}")->assertOk()->assertJsonPath('data.id', $privado->id);
+    }
+
+    public function test_detail_permissions_reflect_author_state_and_suspension(): void
+    {
+        $autor = User::factory()->create(['rol' => 'ciudadano']);
+        $reclamo = Reclamo::factory()->create(['usuario_id' => $autor->id]);
+        Sanctum::actingAs($autor);
+        $this->getJson("/api/reclamos/{$reclamo->id}")->assertOk()
+            ->assertJsonPath('data.puede_editar', true)
+            ->assertJsonPath('data.puede_eliminar', true)
+            ->assertJsonPath('data.puede_votar', false);
+
+        $autor->forceFill(['suspendido_hasta' => now()->addDay()])->save();
+        $this->getJson("/api/reclamos/{$reclamo->id}")->assertOk()
+            ->assertJsonPath('data.puede_editar', false)
+            ->assertJsonPath('data.puede_eliminar', true);
+
+        $otroEstado = EstadoReclamo::firstOrCreate(['nombre' => 'en_proceso']);
+        $reclamo->historialEstados()->create([
+            'estado_id' => $otroEstado->id,
+            'usuario_id' => $autor->id,
+            'visibilidad' => 'publica',
+            'created_at' => now(),
+        ]);
+        $this->getJson("/api/reclamos/{$reclamo->id}")->assertOk()
+            ->assertJsonPath('data.puede_eliminar', false);
+
+        $vecino = User::factory()->create(['rol' => 'ciudadano']);
+        Sanctum::actingAs($vecino);
+        $this->getJson("/api/reclamos/{$reclamo->id}")->assertOk()
+            ->assertJsonPath('data.puede_votar', true)
+            ->assertJsonPath('data.puede_editar', false);
+        $vecino->forceFill(['suspendido_hasta' => now()->addDay()])->save();
+        $this->getJson("/api/reclamos/{$reclamo->id}")->assertOk()->assertJsonPath('data.puede_votar', false);
+
+        $finalizado = Reclamo::factory()->enEstado('resuelto')->create(['usuario_id' => $autor->id]);
+        Sanctum::actingAs($autor);
+        $this->getJson("/api/reclamos/{$finalizado->id}")->assertOk()
+            ->assertJsonPath('data.puede_editar', false)
+            ->assertJsonPath('data.puede_eliminar', false)
+            ->assertJsonPath('data.puede_votar', false);
+    }
 
     public function test_returns_401_when_no_token_is_provided(): void
     {

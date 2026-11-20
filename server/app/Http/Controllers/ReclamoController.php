@@ -64,6 +64,36 @@ class ReclamoController extends Controller
         return ReclamoMapaResource::collection($reclamos);
     }
 
+    public function show(Request $request, Reclamo $reclamo): JsonResponse
+    {
+        $usuario = $request->user();
+        $esAutor = (int) $reclamo->usuario_id === (int) $usuario->id;
+        abort_unless($reclamo->es_publico || $esAutor, 404);
+
+        $reclamo->load(['tipoReclamo', 'estado', 'fotos']);
+        $reclamo->loadCount([
+            'votos as confirmaciones_count' => fn (Builder $q) => $q->where('valor', 'confirma'),
+            'votos as desmentidas_count' => fn (Builder $q) => $q->where('valor', 'desmiente'),
+        ]);
+
+        $estado = $reclamo->estado?->nombre;
+        $suspendido = $usuario->suspendido_hasta?->isFuture() ?? false;
+        $tuvoCambio = $esAutor && $reclamo->historialEstados()
+            ->where('estado_id', '!=', $reclamo->estado_id)
+            ->exists();
+
+        return response()->json(['data' => array_merge(
+            (new ReclamoMapaResource($reclamo))->resolve($request),
+            [
+                'puede_editar' => $esAutor && $estado === 'pendiente' && ! $suspendido,
+                'puede_eliminar' => $esAutor && $estado === 'pendiente' && ! $tuvoCambio,
+                'puede_votar' => ! $esAutor && ! $suspendido
+                    && in_array($usuario->rol, ['ciudadano', 'empleado'], true)
+                    && in_array($estado, ['pendiente', 'en_proceso'], true),
+            ],
+        )]);
+    }
+
 
     public function store(Request $request)
     {

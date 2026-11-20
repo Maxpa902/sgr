@@ -24,6 +24,14 @@ class SesionIniciada {
   final Usuario usuario;
 }
 
+class DetalleReclamoVecino {
+  const DetalleReclamoVecino({required this.reclamo, required this.puedeEditar, required this.puedeEliminar, required this.puedeVotar});
+  final ReclamoMapa reclamo;
+  final bool puedeEditar;
+  final bool puedeEliminar;
+  final bool puedeVotar;
+}
+
 /// Un bloque de cuentas y el cursor para solicitar el siguiente.
 class PaginaUsuarios {
   const PaginaUsuarios({
@@ -426,6 +434,17 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
       _reclamoDesdeJson(reclamo as Map<String, dynamic>),
   ];
 
+  }
+
+  Future<DetalleReclamoVecino> detalleReclamoVecino(int id) async {
+    final json = await _get('/api/reclamos/$id');
+    final data = json['data'] as Map<String, dynamic>;
+    return DetalleReclamoVecino(
+      reclamo: _reclamoDesdeJson(data),
+      puedeEditar: data['puede_editar'] == true,
+      puedeEliminar: data['puede_eliminar'] == true,
+      puedeVotar: data['puede_votar'] == true,
+    );
   }
 
   /// Devuelve los reclamos creados por el usuario autenticado o en los que participó.

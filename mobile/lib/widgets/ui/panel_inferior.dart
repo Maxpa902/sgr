@@ -14,6 +14,8 @@ class PanelInferior extends StatelessWidget {
     this.acciones = const [],
     this.procesando = false,
     this.semanticsLabel,
+    this.proporcionAlturaMaxima,
+    this.maxLineasTitulo,
   });
 
   final String titulo;
@@ -22,12 +24,14 @@ class PanelInferior extends StatelessWidget {
   final List<Widget> acciones;
   final bool procesando;
   final String? semanticsLabel;
+  final double? proporcionAlturaMaxima;
+  final int? maxLineasTitulo;
 
   /// Abre el panel modal inferior; el host `FScaffold` no tiene que cambiar.
   Future<T?> mostrar<T>(BuildContext context) => showFSheet<T>(
     context: context,
     side: .btt,
-    mainAxisMaxRatio: 0.9,
+    mainAxisMaxRatio: proporcionAlturaMaxima ?? 0.9,
     useSafeArea: true,
     resizeToAvoidBottomInset: true,
     barrierDismissible: !procesando,
@@ -52,7 +56,9 @@ class PanelInferior extends StatelessWidget {
             top: false,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+                maxHeight:
+                    MediaQuery.sizeOf(context).height *
+                    (proporcionAlturaMaxima ?? 0.85),
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
@@ -68,6 +74,10 @@ class PanelInferior extends StatelessWidget {
                             label: semanticsLabel ?? titulo,
                             child: Text(
                               titulo,
+                              maxLines: maxLineasTitulo,
+                              overflow: maxLineasTitulo == null
+                                  ? null
+                                  : TextOverflow.ellipsis,
                               style: context.theme.typography.body.lg.copyWith(
                                 color: context.theme.colors.foreground,
                                 fontWeight: FontWeight.w600,

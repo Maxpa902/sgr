@@ -125,8 +125,8 @@ class _FilaCambio extends StatelessWidget {
             children: [
               Container(
                 margin: const EdgeInsets.only(top: 4),
-                width: 12,
-                height: 12,
+                width: esElUltimo ? 14 : 12,
+                height: esElUltimo ? 14 : 12,
                 decoration: BoxDecoration(
                   color: colorDelEstado(cambio.estado),
                   shape: BoxShape.circle,
@@ -144,11 +144,15 @@ class _FilaCambio extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${nombreDelEstado(cambio.estado)} · '
-                    '${fechaCorta(cambio.creadoEn)}',
+                    nombreDelEstado(cambio.estado),
                     style: textos.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: esElUltimo ? FontWeight.w700 : FontWeight.w600,
+                      color: esElUltimo ? colorDelEstado(cambio.estado) : ColoresApp.textoPrincipal,
                     ),
+                  ),
+                  Text(
+                    fechaCorta(cambio.creadoEn),
+                    style: textos.bodySmall?.copyWith(color: ColoresApp.textoSecundario),
                   ),
                   Text(
                     observacion.isEmpty ? quien : '$quien: $observacion',

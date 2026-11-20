@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,7 +11,9 @@ import '../mapa/zona.dart';
 import '../modelos/reclamo_mapa.dart';
 import '../sesion/sesion.dart';
 import '../ubicacion/servicio_ubicacion.dart';
-import '../validaciones.dart';
+import '../tema/tema_app.dart';
+import '../widgets/componentes_ui.dart';
+import '../widgets/formulario_reclamo_ui.dart';
 import '../widgets/mensaje_error.dart';
 
 class EditarReclamoPage extends StatefulWidget {
@@ -49,7 +52,9 @@ class _EditarReclamoPageState extends State<EditarReclamoPage> {
   void initState() {
     super.initState();
     _titulo = TextEditingController(text: widget.reclamo.titulo);
-    _descripcion = TextEditingController(text: widget.reclamo.descripcion ?? '');
+    _descripcion = TextEditingController(
+      text: widget.reclamo.descripcion ?? '',
+    );
     _ubicacion = LatLng(widget.reclamo.latitud, widget.reclamo.longitud);
     _fotosExistentes = List<FotoReclamo>.from(widget.reclamo.fotosDetalle);
   }
@@ -61,9 +66,8 @@ class _EditarReclamoPageState extends State<EditarReclamoPage> {
     super.dispose();
   }
 
-  List<FotoReclamo> get _fotosExistentesVisibles => _fotosExistentes
-      .where((f) => !_idsFotosEliminar.contains(f.id))
-      .toList();
+  List<FotoReclamo> get _fotosExistentesVisibles =>
+      _fotosExistentes.where((f) => !_idsFotosEliminar.contains(f.id)).toList();
 
   int get _totalFotosActuales =>
       _fotosExistentesVisibles.length + _nuevasImagenes.length;
@@ -96,9 +100,7 @@ class _EditarReclamoPageState extends State<EditarReclamoPage> {
     final punto = await showDialog<LatLng>(
       context: context,
       useSafeArea: false,
-      builder: (context) => _SelectorPuntoMapaEdicion(
-        puntoInicial: _ubicacion,
-      ),
+      builder: (context) => _SelectorPuntoMapaEdicion(puntoInicial: _ubicacion),
     );
 
     if (punto != null && mounted) {
@@ -179,293 +181,209 @@ class _EditarReclamoPageState extends State<EditarReclamoPage> {
   @override
   Widget build(BuildContext context) {
     final existentesVisibles = _fotosExistentesVisibles;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Editar Reclamo')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formulario,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Categoría (no editable)',
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Row(
+    return TemaApp(
+      child: LayoutPagina(
+        titulo: 'Editar Reclamo',
+        alVolver: Navigator.of(context).canPop()
+            ? () => Navigator.of(context).pop()
+            : null,
+        superficie: SuperficiePagina.bordeABorde,
+        contenido: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Form(
+                  key: _formulario,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(
-                        iconoDeCategoria(widget.reclamo.tipo.icono),
-                        size: 20,
+                      DatosFormularioReclamo(
+                        categoria: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Categoría (no editable)',
+                            border: OutlineInputBorder(),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                iconoDeCategoria(widget.reclamo.tipo.icono),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(widget.reclamo.tipo.nombre)),
+                            ],
+                          ),
+                        ),
+                        titulo: _titulo,
+                        descripcion: _descripcion,
+                        habilitado: !_enviando,
+                        errores: _erroresDelServer,
+                        lineasDescripcion: 3,
+                        alCambiarTitulo: (_) =>
+                            setState(() => _erroresDelServer.remove('titulo')),
+                        alCambiarDescripcion: (_) => setState(
+                          () => _erroresDelServer.remove('descripcion'),
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(widget.reclamo.tipo.nombre),
+                      const SizedBox(height: 16),
+                      UbicacionFormularioReclamo(
+                        titulo: 'Ubicación del reclamo',
+                        descripcion:
+                            'Lat. ${_ubicacion.latitude.toStringAsFixed(5)} · Lon. ${_ubicacion.longitude.toStringAsFixed(5)}',
+                        textoMapa: 'Mover punto en el mapa',
+                        alElegirMapa: _enviando
+                            ? null
+                            : _seleccionarPuntoEnMapa,
+                        alUsarUbicacion: (_obteniendoUbicacion || _enviando)
+                            ? null
+                            : _obtenerUbicacionActual,
+                        cargando: _obteniendoUbicacion,
+                      ),
+                      const SizedBox(height: 16),
+                      SeccionFormularioReclamo(
+                        titulo: 'Fotos del reclamo ($_totalFotosActuales / 5)',
+                        icono: Icons.photo_library_outlined,
+                        descripcion:
+                            'Podés agregar o quitar fotos manteniendo entre 1 y 5.',
+                        contenido: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (existentesVisibles.isNotEmpty ||
+                                _nuevasImagenes.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 120,
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  children: [
+                                    for (final foto in existentesVisibles)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 10,
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.topRight,
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.network(
+                                                foto.url,
+                                                width: 120,
+                                                height: 120,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Container(
+                                                      width: 120,
+                                                      height: 120,
+                                                      color:
+                                                          Colors.grey.shade300,
+                                                      child: const Icon(
+                                                        Icons.broken_image,
+                                                      ),
+                                                    ),
+                                              ),
+                                            ),
+                                            if (_puedeQuitarFoto)
+                                              IconButton.filled(
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                icon: const Icon(
+                                                  Icons.close,
+                                                  size: 16,
+                                                ),
+                                                onPressed: _enviando
+                                                    ? null
+                                                    : () => setState(
+                                                        () => _idsFotosEliminar
+                                                            .add(foto.id),
+                                                      ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    for (
+                                      var i = 0;
+                                      i < _nuevasImagenes.length;
+                                      i++
+                                    )
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 10,
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.topRight,
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                _nuevasImagenes[i],
+                                                width: 120,
+                                                height: 120,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                            if (_puedeQuitarFoto)
+                                              IconButton.filled(
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                icon: const Icon(
+                                                  Icons.close,
+                                                  size: 16,
+                                                ),
+                                                onPressed: _enviando
+                                                    ? null
+                                                    : () => setState(
+                                                        () => _nuevasImagenes
+                                                            .removeAt(i),
+                                                      ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            BotonesFotoReclamo(
+                              alCamara: (_enviando || !_puedeAgregarFoto)
+                                  ? null
+                                  : () =>
+                                        _seleccionarImagen(ImageSource.camera),
+                              alGaleria: (_enviando || !_puedeAgregarFoto)
+                                  ? null
+                                  : () =>
+                                        _seleccionarImagen(ImageSource.gallery),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_error case final err?) ...[
+                        const SizedBox(height: 16),
+                        MensajeError(err),
+                      ],
+                      const SizedBox(height: 24),
+                      FButton(
+                        onPress: _enviando ? null : _guardarCambios,
+                        child: _enviando
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Guardar cambios'),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _titulo,
-                  enabled: !_enviando,
-                  decoration: InputDecoration(
-                    labelText: 'Título',
-                    prefixIcon: const Icon(Icons.title_outlined),
-                    border: const OutlineInputBorder(),
-                    errorText: _erroresDelServer['titulo'],
-                  ),
-                  validator: obligatorio('Ingresá un título.'),
-                  onChanged: (_) =>
-                      setState(() => _erroresDelServer.remove('titulo')),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descripcion,
-                  enabled: !_enviando,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Descripción',
-                    prefixIcon: const Icon(Icons.description_outlined),
-                    border: const OutlineInputBorder(),
-                    errorText: _erroresDelServer['descripcion'],
-                  ),
-                  validator: obligatorio('Ingresá una descripción.'),
-                  onChanged: (_) =>
-                      setState(() => _erroresDelServer.remove('descripcion')),
-                ),
-                const SizedBox(height: 20),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.location_on_outlined),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Ubicación del reclamo',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Lat. ${_ubicacion.latitude.toStringAsFixed(5)} · Lon. ${_ubicacion.longitude.toStringAsFixed(5)}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed:
-                              _enviando ? null : _seleccionarPuntoEnMapa,
-                          icon: const Icon(Icons.map_outlined),
-                          label: const Text('Mover punto en el mapa'),
-                        ),
-                        TextButton.icon(
-                          onPressed: (_obteniendoUbicacion || _enviando)
-                              ? null
-                              : _obtenerUbicacionActual,
-                          icon: const Icon(Icons.my_location),
-                          label: const Text('Usar mi ubicación actual'),
-                        ),
-                        if (_obteniendoUbicacion)
-                          const LinearProgressIndicator(),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.photo_library_outlined),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Fotos del reclamo ($_totalFotosActuales / 5)',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Podés agregar o quitar fotos manteniendo entre 1 y 5.',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (existentesVisibles.isNotEmpty ||
-                            _nuevasImagenes.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 120,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                for (final foto in existentesVisibles)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      alignment: Alignment.topRight,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: Image.network(
-                                            foto.url,
-                                            width: 120,
-                                            height: 120,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                              width: 120,
-                                              height: 120,
-                                              color: Colors.grey.shade300,
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        if (_puedeQuitarFoto)
-                                          IconButton.filled(
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            icon: const Icon(
-                                              Icons.close,
-                                              size: 16,
-                                            ),
-                                            onPressed: _enviando
-                                                ? null
-                                                : () => setState(
-                                                      () => _idsFotosEliminar
-                                                          .add(foto.id),
-                                                    ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                for (var i = 0;
-                                    i < _nuevasImagenes.length;
-                                    i++)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      alignment: Alignment.topRight,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: Image.file(
-                                            _nuevasImagenes[i],
-                                            width: 120,
-                                            height: 120,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        if (_puedeQuitarFoto)
-                                          IconButton.filled(
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            icon: const Icon(
-                                              Icons.close,
-                                              size: 16,
-                                            ),
-                                            onPressed: _enviando
-                                                ? null
-                                                : () => setState(
-                                                      () => _nuevasImagenes
-                                                          .removeAt(i),
-                                                    ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: (_enviando || !_puedeAgregarFoto)
-                                    ? null
-                                    : () => _seleccionarImagen(
-                                          ImageSource.camera,
-                                        ),
-                                icon: const Icon(Icons.camera_alt_outlined),
-                                label: const Text('Cámara'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: (_enviando || !_puedeAgregarFoto)
-                                    ? null
-                                    : () => _seleccionarImagen(
-                                          ImageSource.gallery,
-                                        ),
-                                icon: const Icon(
-                                  Icons.photo_library_outlined,
-                                ),
-                                label: const Text('Galería'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_error case final err?) ...[
-                  const SizedBox(height: 16),
-                  MensajeError(err),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _enviando ? null : _guardarCambios,
-                  child: _enviando
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Guardar cambios'),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -504,10 +422,7 @@ class _SelectorPuntoMapaEdicionState extends State<_SelectorPuntoMapaEdicion> {
             Container(
               width: double.infinity,
               color: Theme.of(context).colorScheme.surfaceContainerLow,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: const Text(
                 'Mové el mapa hasta que el pin quede sobre el lugar del problema.',
               ),

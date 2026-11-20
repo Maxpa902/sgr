@@ -51,11 +51,11 @@ void main() {
 
       await mostrarSeguimiento(tester, sesion);
 
-      expect(find.textContaining('Pendiente ·'), findsOneWidget);
+      expect(find.text('Pendiente'), findsOneWidget);
       expect(find.text('Reclamo cargado'), findsOneWidget);
-      expect(find.textContaining('En proceso ·'), findsOneWidget);
+      expect(find.text('En proceso'), findsOneWidget);
       expect(find.text('Cooperativa'), findsOneWidget);
-      expect(find.textContaining('Resuelto ·'), findsOneWidget);
+      expect(find.text('Resuelto'), findsOneWidget);
       expect(find.text('Cooperativa: Se reparó el cable'), findsOneWidget);
     },
   );

@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import '../api/api_exception.dart';
 import '../sesion/sesion.dart';
 import '../tema/colores.dart';
+import 'componentes_ui.dart';
 
 class ListaVotantesSheet extends StatefulWidget {
-  const ListaVotantesSheet({super.key, required this.sesion, required this.reclamoId});
+  const ListaVotantesSheet({
+    super.key,
+    required this.sesion,
+    required this.reclamoId,
+  });
 
   final Sesion sesion;
   final int reclamoId;
 
-  static void mostrar(BuildContext context, {required Sesion sesion, required int reclamoId}) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => ListaVotantesSheet(
-        sesion: sesion,
-        reclamoId: reclamoId,
-      ),
-    );
+  static void mostrar(
+    BuildContext context, {
+    required Sesion sesion,
+    required int reclamoId,
+  }) {
+    PanelInferior(
+      titulo: 'Votos del reclamo',
+      proporcionAlturaMaxima: 0.75,
+      contenido: ListaVotantesSheet(sesion: sesion, reclamoId: reclamoId),
+    ).mostrar<void>(context);
   }
 
   @override
@@ -44,105 +46,73 @@ class _ListaVotantesSheetState extends State<ListaVotantesSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * .75,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _votantes,
-            builder: (context, snapshot) {
-              final cargando = snapshot.connectionState != ConnectionState.done;
-              final votantes = snapshot.data ?? [];
-              final confirmaciones = votantes.where((v) => v['valor'] == 'confirma').toList();
-              final desmentidas = votantes.where((v) => v['valor'] != 'confirma').toList();
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('Votos del reclamo', style: textos.titleLarge),
-                      ),
-                      if (!cargando && !snapshot.hasError)
-                        Text(
-                          '${votantes.length} ${votantes.length == 1 ? 'voto' : 'votos'}',
-                          style: textos.bodyMedium?.copyWith(
-                            color: ColoresApp.textoSecundario,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  if (cargando)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (snapshot.hasError) ...[
-                    Text(
-                      snapshot.error is ApiException
-                          ? (snapshot.error! as ApiException).mensaje
-                          : 'No se pudieron cargar los votos.',
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () => setState(_cargar),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
-                      ),
-                    ),
-                  ] else if (votantes.isEmpty)
-                    const Text('Aún no hay votos registrados para este reclamo.')
-                  else
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (confirmaciones.isNotEmpty)
-                              _GrupoVotantes(
-                                titulo: 'Confirmaciones',
-                                icono: Icons.thumb_up_outlined,
-                                color: ColoresApp.exito,
-                                votantes: confirmaciones,
-                              ),
-                            if (confirmaciones.isNotEmpty && desmentidas.isNotEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(height: 1),
-                              ),
-                            if (desmentidas.isNotEmpty)
-                              _GrupoVotantes(
-                                titulo: 'Desmentidas',
-                                icono: Icons.thumb_down_outlined,
-                                color: ColoresApp.error,
-                                votantes: desmentidas,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _votantes,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                snapshot.error is ApiException
+                    ? (snapshot.error! as ApiException).mensaje
+                    : 'No se pudieron cargar los votos.',
+              ),
+              const SizedBox(height: 8),
+              FButton(
+                variant: .outline,
+                onPress: () => setState(_cargar),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          );
+        }
+        final votantes = snapshot.data ?? [];
+        if (votantes.isEmpty) {
+          return const Text('Aún no hay votos registrados para este reclamo.');
+        }
+        final confirmaciones = votantes
+            .where((v) => v['valor'] == 'confirma')
+            .toList();
+        final desmentidas = votantes
+            .where((v) => v['valor'] != 'confirma')
+            .toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${votantes.length} ${votantes.length == 1 ? 'voto' : 'votos'}',
+            ),
+            const SizedBox(height: 16),
+            if (confirmaciones.isNotEmpty)
+              _GrupoVotantes(
+                titulo: 'Confirmaciones',
+                icono: Icons.thumb_up_outlined,
+                color: ColoresApp.exito,
+                votantes: confirmaciones,
+              ),
+            if (confirmaciones.isNotEmpty && desmentidas.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(height: 1),
+              ),
+            if (desmentidas.isNotEmpty)
+              _GrupoVotantes(
+                titulo: 'Desmentidas',
+                icono: Icons.thumb_down_outlined,
+                color: ColoresApp.error,
+                votantes: desmentidas,
+              ),
+          ],
+        );
+      },
     );
   }
 }
