@@ -46,7 +46,9 @@ class SgrApp extends StatelessWidget {
       ),
       builder: (context, child) => FTheme(
         data: FTheme.neutral.light.touch,
-        child: FToaster(child: child!),
+        child: FToaster(
+          child: SafeArea(top: false, left: false, right: false, child: child!),
+        ),
       ),
       // Cada vez que la sesión avisa un cambio, se vuelve a elegir la pantalla.
       home: ListenableBuilder(

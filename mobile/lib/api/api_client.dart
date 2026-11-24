@@ -25,7 +25,12 @@ class SesionIniciada {
 }
 
 class DetalleReclamoVecino {
-  const DetalleReclamoVecino({required this.reclamo, required this.puedeEditar, required this.puedeEliminar, required this.puedeVotar});
+  const DetalleReclamoVecino({
+    required this.reclamo,
+    required this.puedeEditar,
+    required this.puedeEliminar,
+    required this.puedeVotar,
+  });
   final ReclamoMapa reclamo;
   final bool puedeEditar;
   final bool puedeEliminar;
@@ -163,8 +168,6 @@ class ApiClient {
     return Usuario.fromJson(json['data'] as Map<String, dynamic>);
   }
 
-
-
   /// Obtiene la lista de usuarios con sanciones ordenados de mayor a menor.
   Future<List<Usuario>> listarUsuariosConSanciones() async {
     final json = await _get('/api/admin/usuarios-sancionados');
@@ -191,6 +194,7 @@ class ApiClient {
     String? busqueda,
     String? rol,
     String? estado,
+    String? suspension,
     String? cursor,
   }) async {
     final parametros = <String, Object>{};
@@ -202,6 +206,9 @@ class ApiClient {
     }
     if (estado != null) {
       parametros['estado'] = estado;
+    }
+    if (suspension != null) {
+      parametros['suspension'] = suspension;
     }
     if (cursor != null) {
       parametros['cursor'] = cursor;
@@ -219,6 +226,7 @@ class ApiClient {
       proximoCursor: metadata['next_cursor'] as String?,
     );
   }
+
   /// Listar usuarios para el panel de administración de cuentas.
   Future<PaginaUsuarios> listarUsuariosAdmin({
     String? busqueda,
@@ -245,27 +253,34 @@ class ApiClient {
     );
   }
 
-
   /// Actualizar el rol o estado de una cuenta (Admin).
-Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async {
-  final datos = <String, dynamic>{
-    if (activo != null) 'activo': activo,
-    if (rol != null) 'rol': rol,
-  };
-  final uri = _uri('/api/usuarios/$usuarioId');
-  await _procesar(
-    _http.patch(
-      uri,
-      headers: _encabezados(conCuerpo: true),
-      body: jsonEncode(datos),
-    ),
-    metodo: 'PATCH',
-    uri: uri,
-  );
-}
+  Future<void> actualizarCuenta(
+    int usuarioId, {
+    bool? activo,
+    String? rol,
+  }) async {
+    final datos = <String, dynamic>{
+      if (activo != null) 'activo': activo,
+      if (rol != null) 'rol': rol,
+    };
+    final uri = _uri('/api/usuarios/$usuarioId');
+    await _procesar(
+      _http.patch(
+        uri,
+        headers: _encabezados(conCuerpo: true),
+        body: jsonEncode(datos),
+      ),
+      metodo: 'PATCH',
+      uri: uri,
+    );
+  }
 
   /// Crear una nueva categoría de reclamo (Admin).
-  Future<void> crearCategoria({required String nombre, String? descripcion, String? icono}) async {
+  Future<void> crearCategoria({
+    required String nombre,
+    String? descripcion,
+    String? icono,
+  }) async {
     await _post('/api/admin/tipos-reclamo', {
       'nombre': nombre,
       if (descripcion != null) 'descripcion': descripcion,
@@ -274,7 +289,13 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
   }
 
   /// Actualizar una categoría existente (Admin).
-  Future<void> actualizarCategoria(int id, {required String nombre, String? descripcion, String? icono, bool? activo}) async {
+  Future<void> actualizarCategoria(
+    int id, {
+    required String nombre,
+    String? descripcion,
+    String? icono,
+    bool? activo,
+  }) async {
     // Si usas PUT en tu API:
     final uri = _uri('/api/admin/tipos-reclamo/$id');
     await _procesar(
@@ -297,6 +318,7 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
   Future<void> toggleActivoCategoria(int id, bool activo) async {
     await _post('/api/admin/tipos-reclamo/$id/activo', {'activo': activo});
   }
+
   /// Lista reclamos para el panel de admin, con búsqueda, filtros y cursor.
   Future<PaginaReclamosAdmin> listarReclamosAdmin({
     String? busqueda,
@@ -362,8 +384,15 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
     await _post('/api/reclamos/$id/comenzar', {});
   }
 
-  Future<void> finalizarReclamo(int id, {required String observacion, required String visibilidad}) async {
-    await _post('/api/reclamos/$id/finalizar', {'observacion': observacion, 'visibilidad': visibilidad});
+  Future<void> finalizarReclamo(
+    int id, {
+    required String observacion,
+    required String visibilidad,
+  }) async {
+    await _post('/api/reclamos/$id/finalizar', {
+      'observacion': observacion,
+      'visibilidad': visibilidad,
+    });
   }
 
   Future<void> asignarReclamo(int id, int responsableId) async {
@@ -429,11 +458,10 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
       },
     );
 
-        return [
-    for (final reclamo in json['data'] as List)
-      _reclamoDesdeJson(reclamo as Map<String, dynamic>),
-  ];
-
+    return [
+      for (final reclamo in json['data'] as List)
+        _reclamoDesdeJson(reclamo as Map<String, dynamic>),
+    ];
   }
 
   Future<DetalleReclamoVecino> detalleReclamoVecino(int id) async {
@@ -452,7 +480,7 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
     final json = await _get('/api/reclamos', parametros: {'mis_reclamos': '1'});
     return [
       for (final reclamo in json['data'] as List)
-       _reclamoDesdeJson(reclamo as Map<String, dynamic>),
+        _reclamoDesdeJson(reclamo as Map<String, dynamic>),
     ];
   }
 
@@ -598,12 +626,13 @@ Future<void> actualizarCuenta(int usuarioId, {bool? activo, String? rol}) async 
     );
   }
 
-ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
+  ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
     final copia = Map<String, dynamic>.from(json);
 
     if (copia['fotos'] is List) {
       copia['fotos'] = [
-        for (final f in copia['fotos'] as List) _normalizarUrlFoto(f.toString()),
+        for (final f in copia['fotos'] as List)
+          _normalizarUrlFoto(f.toString()),
       ];
     }
 
@@ -611,10 +640,7 @@ ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
       copia['fotos_detalle'] = [
         for (final f in copia['fotos_detalle'] as List)
           if (f is Map<String, dynamic>)
-            {
-              'id': f['id'],
-              'url': _normalizarUrlFoto(f['url'].toString()),
-            },
+            {'id': f['id'], 'url': _normalizarUrlFoto(f['url'].toString())},
       ];
     }
 
@@ -631,7 +657,6 @@ ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
     }
     return url;
   }
-
 
   Future<Map<String, dynamic>> _get(
     String ruta, {
@@ -793,6 +818,7 @@ ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
             : 'Revisá los datos marcados.',
         statusCode: statusCode,
         errores: _primerErrorPorCampo(json['errors']),
+        todosLosErrores: _todosLosErroresPorCampo(json['errors']),
       ),
       429 => ApiException(
         'Hiciste demasiados intentos. Esperá un minuto y probá de nuevo.',
@@ -813,6 +839,15 @@ ReclamoMapa _reclamoDesdeJson(Map<String, dynamic> json) {
     return {
       for (final MapEntry(:key, :value) in errores.entries)
         if (value is List && value.isNotEmpty) '$key': '${value.first}',
+    };
+  }
+
+  Map<String, List<String>> _todosLosErroresPorCampo(Object? errores) {
+    if (errores is! Map) return {};
+    return {
+      for (final MapEntry(:key, :value) in errores.entries)
+        if (value is List && value.isNotEmpty)
+          '$key': value.whereType<String>().toList(),
     };
   }
 }

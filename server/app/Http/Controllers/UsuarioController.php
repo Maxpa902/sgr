@@ -28,13 +28,14 @@ class UsuarioController extends Controller
     {
         $filtros = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
-            'rol' => ['nullable', Rule::in(['ciudadano', 'empleado', 'admin'])],
+            'rol' => ['nullable', Rule::in(['ciudadano', 'empleado', 'admin', 'personal'])],
             'estado' => ['nullable', Rule::in(['activa', 'inactiva'])],
+            'suspension' => ['nullable', Rule::in(['activos', 'suspendidos'])],
             'cursor' => ['nullable', 'string'],
         ]);
 
         $query = User::query()
-            ->select(['id', 'nombre', 'apellido', 'email', 'rol', 'activo']);
+            ->select(['id', 'nombre', 'apellido', 'email', 'rol', 'activo', 'suspendido_hasta']);
 
         $terminos = preg_split('/\s+/', trim($filtros['q'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         foreach ($terminos as $termino) {
@@ -47,11 +48,23 @@ class UsuarioController extends Controller
         }
 
         if (isset($filtros['rol'])) {
-            $query->where('rol', $filtros['rol']);
+            if ($filtros['rol'] === 'personal') {
+                $query->whereIn('rol', ['admin', 'empleado']);
+            } else {
+                $query->where('rol', $filtros['rol']);
+            }
         }
 
         if (isset($filtros['estado'])) {
             $query->where('activo', $filtros['estado'] === 'activa');
+        }
+
+        if (($filtros['suspension'] ?? null) === 'suspendidos') {
+            $query->where('suspendido_hasta', '>', now());
+        } elseif (($filtros['suspension'] ?? null) === 'activos') {
+            $query->where(fn (Builder $query) => $query
+                ->whereNull('suspendido_hasta')
+                ->orWhere('suspendido_hasta', '<=', now()));
         }
 
         $total = (clone $query)->count();
@@ -60,7 +73,7 @@ class UsuarioController extends Controller
             ->orderBy('nombre')
             ->orderBy('id')
             ->cursorPaginate(30)
-            ->appends($request->only(['q', 'rol', 'estado']));
+            ->appends($request->only(['q', 'rol', 'estado', 'suspension']));
 
         return UsuarioAdminResource::collection($usuarios)
             ->additional(['meta' => ['total' => $total]]);

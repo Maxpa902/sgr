@@ -19,6 +19,7 @@ class UsuarioAdminResource extends JsonResource
             'email' => $this->email,
             'rol' => $this->rol,
             'activo' => (bool) $this->activo,
+            'suspendido_hasta' => $this->suspendido_hasta?->toISOString(),
         ];
     }
 }

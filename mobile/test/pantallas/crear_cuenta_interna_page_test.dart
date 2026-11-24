@@ -106,9 +106,10 @@ void main() {
   ) async {
     final sesion = sesionDePrueba(
       (_) async => respuestaJson({
-        'message': 'Ya existe una cuenta con ese DNI.',
+        'message': 'Ya existe una cuenta con ese DNI. (y 1 error más)',
         'errors': {
           'dni': ['Ya existe una cuenta con ese DNI.'],
+          'email': ['Ya existe una cuenta con ese email.'],
         },
       }, 422),
     );
@@ -118,7 +119,10 @@ void main() {
     await tocarCrearCuenta(tester);
 
     expect(find.text('Ya existe una cuenta con ese DNI.'), findsOneWidget);
-    expect(find.text('Revisá los datos marcados.'), findsOneWidget);
+    expect(
+      find.text('• Ya existe una cuenta con ese DNI.\n• Ya existe una cuenta con ese email.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

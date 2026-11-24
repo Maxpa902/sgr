@@ -45,9 +45,9 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   // --- Estado sección Vecinos y Sanciones ---
   final List<Usuario> _vecinos = [];
-  final Map<int, Usuario> _mapaConSanciones = {};
   final _busquedaVecinos = TextEditingController();
   final _scrollVecinos = ScrollController();
+  String _filtroSuspension = 'todos';
 
   String? _cursorVecinos;
   String? _errorInicialVecinos;
@@ -100,12 +100,6 @@ class _UsuariosPageState extends State<UsuariosPage> {
     final nombreA = '${a.apellido} ${a.nombre}'.trim().toLowerCase();
     final nombreB = '${b.apellido} ${b.nombre}'.trim().toLowerCase();
     return nombreA.compareTo(nombreB);
-  }
-
-  /// Reemplaza el usuario del listado general con la versión que trae los
-  /// datos completos de suspensión si existe en [_mapaConSanciones].
-  Usuario _combinarConSancion(Usuario vecino) {
-    return _mapaConSanciones[vecino.id] ?? vecino;
   }
 
   void _mostrarMensaje(
@@ -413,7 +407,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
     try {
       final pagina = await widget.sesion.listarUsuarios(
         busqueda: _busquedaPersonal.text.trim(),
-        rol: _filtroRol == 'todos' ? null : _filtroRol,
+        rol: _filtroRol == 'todos' ? 'personal' : _filtroRol,
       );
       if (!mounted || version != _versionConsultaPersonal) return;
 
@@ -476,7 +470,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
     try {
       final pagina = await widget.sesion.listarUsuarios(
         busqueda: _busquedaPersonal.text.trim(),
-        rol: _filtroRol == 'todos' ? null : _filtroRol,
+        rol: _filtroRol == 'todos' ? 'personal' : _filtroRol,
         cursor: cursor,
       );
       if (!mounted || version != _versionConsultaPersonal) return;
@@ -560,56 +554,23 @@ class _UsuariosPageState extends State<UsuariosPage> {
     try {
       final busqueda = _busquedaVecinos.text.trim();
 
-      // Pedimos en paralelo el listado de vecinos y los usuarios con sanciones
-      // para asegurar que los suspendidos tengan sus datos completos.
-      final resultados = await Future.wait([
-        widget.sesion.listarUsuarios(
-          busqueda: busqueda,
-          rol: 'ciudadano',
-        ),
-        widget.sesion.obtenerUsuariosConSancionesOrdenados(),
-      ]);
+      final pagina = await widget.sesion.listarUsuarios(
+        busqueda: busqueda,
+        rol: 'ciudadano',
+        suspension: _filtroSuspension == 'todos' ? null : _filtroSuspension,
+      );
 
       if (!mounted || version != _versionConsultaVecinos) return;
 
-      final pagina = resultados[0] as dynamic;
-      final conSanciones = resultados[1] as List<Usuario>;
-
-      _mapaConSanciones
-        ..clear()
-        ..addEntries(conSanciones.map((u) => MapEntry(u.id, u)));
-
-      final combinados = (pagina.usuarios as List<Usuario>)
-          .map(_combinarConSancion)
-          .toList();
-
-      // Aseguramos que los suspendidos que coincidan con la búsqueda estén
-      // presentes arriba incluso si venían en páginas posteriores.
-      final idsCargados = combinados.map((u) => u.id).toSet();
-      final q = busqueda.toLowerCase();
-      for (final sancionado in conSanciones) {
-        if (!sancionado.estaSuspendido) continue;
-        if (idsCargados.contains(sancionado.id)) continue;
-        if (q.isNotEmpty) {
-          final nombre =
-              '${sancionado.nombre} ${sancionado.apellido}'.toLowerCase();
-          if (!nombre.contains(q) &&
-              !sancionado.email.toLowerCase().contains(q)) {
-            continue;
-          }
-        }
-        combinados.add(sancionado);
-        idsCargados.add(sancionado.id);
-      }
-
+      final combinados = pagina.usuarios.toList();
       combinados.sort(_compararVecinos);
 
       setState(() {
         _vecinos
           ..clear()
           ..addAll(combinados);
-        _totalVecinos = pagina.total as int;
-        _cursorVecinos = pagina.proximoCursor as String?;
+        _totalVecinos = pagina.total;
+        _cursorVecinos = pagina.proximoCursor;
         _hayMasVecinos = _cursorVecinos != null;
         _cargandoInicialVecinos = false;
         _errorInicialVecinos = null;
@@ -662,14 +623,14 @@ class _UsuariosPageState extends State<UsuariosPage> {
       final pagina = await widget.sesion.listarUsuarios(
         busqueda: _busquedaVecinos.text.trim(),
         rol: 'ciudadano',
+        suspension: _filtroSuspension == 'todos' ? null : _filtroSuspension,
         cursor: cursor,
       );
       if (!mounted || version != _versionConsultaVecinos) return;
 
       final idsExistentes = _vecinos.map((u) => u.id).toSet();
       final nuevos = pagina.usuarios
-          .where((u) => !idsExistentes.contains(u.id))
-          .map(_combinarConSancion);
+          .where((u) => !idsExistentes.contains(u.id));
 
       setState(() {
         _vecinos
@@ -697,6 +658,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
   void _limpiarBusquedaVecinos() {
     _actualizandoFiltrosVecinos = true;
     _busquedaVecinos.clear();
+    _filtroSuspension = 'todos';
     _actualizandoFiltrosVecinos = false;
     unawaited(_recargarVecinos());
   }
@@ -965,7 +927,8 @@ class _UsuariosPageState extends State<UsuariosPage> {
   // WIDGETS SECCIÓN 2: VECINOS Y SANCIONES
   // ===========================================================================
 
-  bool get _hayBusquedaVecinos => _busquedaVecinos.text.trim().isNotEmpty;
+  bool get _hayBusquedaVecinos =>
+      _busquedaVecinos.text.trim().isNotEmpty || _filtroSuspension != 'todos';
 
   Widget _encabezadoVecinos(FColors colors) {
     final totalMostrado =
@@ -994,6 +957,30 @@ class _UsuariosPageState extends State<UsuariosPage> {
                   const Icon(Icons.search, size: 18),
                 ),
           ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final filtro in const [
+                  ('todos', 'Todos'),
+                  ('activos', 'Activos'),
+                  ('suspendidos', 'Suspendidos'),
+                ]) ...[
+                  _ChipFiltroRol(
+                    etiqueta: filtro.$2,
+                    activo: _filtroSuspension == filtro.$1,
+                    alPresionar: () {
+                      if (_filtroSuspension == filtro.$1) return;
+                      setState(() => _filtroSuspension = filtro.$1);
+                      unawaited(_recargarVecinos());
+                    },
+                  ),
+                  const SizedBox(width: 6),
+                ],
+              ],
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1011,7 +998,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
                 GestureDetector(
                   onTap: _limpiarBusquedaVecinos,
                   child: Text(
-                    'Limpiar búsqueda',
+                    'Limpiar filtros',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -1052,10 +1039,10 @@ class _UsuariosPageState extends State<UsuariosPage> {
             ? 'Sin resultados'
             : 'No hay vecinos registrados',
         descripcion: _hayBusquedaVecinos
-            ? 'Probá con otro nombre o correo.'
+            ? 'Probá cambiar la búsqueda o los filtros.'
             : null,
         accion: AccionContenido(
-          etiqueta: _hayBusquedaVecinos ? 'Limpiar búsqueda' : 'Actualizar',
+          etiqueta: _hayBusquedaVecinos ? 'Limpiar filtros' : 'Actualizar',
           alActivar: _hayBusquedaVecinos
               ? _limpiarBusquedaVecinos
               : () => unawaited(_recargarVecinos()),
@@ -1301,7 +1288,7 @@ class _SelectorSeccionPrincipal extends StatelessWidget {
           const SizedBox(width: 4),
           item(
             valor: _SeccionCuentas.vecinosSanciones,
-            etiqueta: 'Sanciones Vecinos',
+            etiqueta: 'Vecinos',
             icono: Icons.gavel_rounded,
           ),
         ],

@@ -53,11 +53,13 @@ class Sesion extends ChangeNotifier {
     String? busqueda,
     String? rol,
     String? estado,
+    String? suspension,
     String? cursor,
   }) => _api.listarUsuarios(
     busqueda: busqueda,
     rol: rol,
     estado: estado,
+    suspension: suspension,
     cursor: cursor,
   );
 

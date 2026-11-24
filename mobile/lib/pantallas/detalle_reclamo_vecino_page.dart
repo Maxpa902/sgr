@@ -194,6 +194,13 @@ class _DetalleReclamoVecinoPageState extends State<DetalleReclamoVecinoPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      'Reclamo #${reclamo.id}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ColoresApp.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
                       reclamo.titulo,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

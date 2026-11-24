@@ -8,6 +8,23 @@ import 'package:mobile/pantallas/mapa_page.dart';
 import 'helpers.dart';
 
 void main() {
+  testWidgets('respeta el espacio de la navegación del sistema', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 1000);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    tester.view.padding = const FakeViewPadding(bottom: 48);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
+    final sesion = sesionDePrueba(sinServer);
+
+    await tester.pumpWidget(SgrApp(sesion: sesion, mostrarMapaBase: false));
+
+    final navegador = tester.getRect(find.byType(Navigator));
+    expect(navegador.bottom, tester.view.physicalSize.height / tester.view.devicePixelRatio - 48);
+  });
+
   /// Un server con una sesión válida y el mapa vacío.
   MockClientHandler serverConSesion() {
     return servidorConRutas({

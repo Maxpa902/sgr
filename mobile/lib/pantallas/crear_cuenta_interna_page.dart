@@ -31,6 +31,7 @@ class _CrearCuentaInternaPageState extends State<CrearCuentaInternaPage> {
 
   /// Errores que devolvió el server, por campo. Se muestran debajo de cada uno.
   Map<String, String> _erroresDelServer = {};
+  Map<String, List<String>> _todosLosErrores = {};
 
   @override
   void dispose() {
@@ -53,6 +54,7 @@ class _CrearCuentaInternaPageState extends State<CrearCuentaInternaPage> {
     setState(() {
       _error = null;
       _erroresDelServer = {};
+      _todosLosErrores = {};
     });
     if (!_formulario.currentState!.validate()) {
       return;
@@ -76,10 +78,15 @@ class _CrearCuentaInternaPageState extends State<CrearCuentaInternaPage> {
     } on ApiException catch (error) {
       if (mounted) {
         setState(() {
-          _error = error.errores.isEmpty
+          _error = error.errores.isEmpty && error.todosLosErrores.isEmpty
               ? error.mensaje
-              : 'Revisá los datos marcados.';
+              : null;
           _erroresDelServer = error.errores;
+          _todosLosErrores = error.todosLosErrores.isNotEmpty
+              ? error.todosLosErrores
+              : error.errores.map(
+                  (campo, mensaje) => MapEntry(campo, [mensaje]),
+                );
         });
       }
     } finally {
@@ -91,8 +98,12 @@ class _CrearCuentaInternaPageState extends State<CrearCuentaInternaPage> {
 
   /// Al corregir un campo, deja de mostrarse el error que había marcado el server.
   void _limpiarErrorDelServer(String campo) {
-    if (_erroresDelServer.containsKey(campo)) {
-      setState(() => _erroresDelServer = {..._erroresDelServer}..remove(campo));
+    if (_erroresDelServer.containsKey(campo) ||
+        _todosLosErrores.containsKey(campo)) {
+      setState(() {
+        _erroresDelServer = {..._erroresDelServer}..remove(campo);
+        _todosLosErrores = {..._todosLosErrores}..remove(campo);
+      });
     }
   }
 
@@ -196,8 +207,16 @@ class _CrearCuentaInternaPageState extends State<CrearCuentaInternaPage> {
                               ? 'Las contraseñas no coinciden.'
                               : null,
                         ),
-                        if (_error case final error?) ...[
-                          AvisoEnLinea(tipo: TipoAviso.error, mensaje: error),
+                        if (_error != null || _todosLosErrores.isNotEmpty) ...[
+                          AvisoEnLinea(
+                            tipo: TipoAviso.error,
+                            mensaje:
+                                _error ??
+                                _todosLosErrores.values
+                                    .expand((mensajes) => mensajes)
+                                    .map((mensaje) => '• $mensaje')
+                                    .join('\n'),
+                          ),
                           const SizedBox(height: 16),
                         ],
                         FButton(

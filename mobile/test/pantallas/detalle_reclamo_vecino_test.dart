@@ -22,6 +22,7 @@ void main() {
       await sesion.restaurar();
       await tester.pumpWidget(MaterialApp(home: DetalleReclamoVecinoPage(reclamo: ReclamoMapa.fromJson(inicial), sesion: sesion)));
       await tester.pumpAndSettle();
+      expect(find.text('Reclamo #1'), findsOneWidget);
       expect(find.text('Editar reclamo'), propio ? findsOneWidget : findsNothing);
       if (propio) {
         await tester.scrollUntilVisible(find.text('Dar de baja'), 200, scrollable: find.byType(Scrollable).last);

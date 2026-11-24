@@ -68,7 +68,7 @@ void main() {
     },
   );
 
-  test('turns a 422 response into the first error of each field', () async {
+  test('preserves every validation error in a 422 response', () async {
     final api = clienteDePrueba(
       (_) async => respuestaJson({
         'message': 'Ya existe una cuenta con ese email. (y 1 error más)',
@@ -84,10 +84,21 @@ void main() {
       throwsA(
         isA<ApiException>()
             .having((e) => e.statusCode, 'statusCode', 422)
-            .having((e) => e.mensaje, 'mensaje', 'Revisá los datos marcados.')
+            .having(
+              (e) => e.mensaje,
+              'mensaje',
+              'Ya existe una cuenta con ese email. (y 1 error más)',
+            )
             .having((e) => e.errores, 'errores', {
               'email': 'Ya existe una cuenta con ese email.',
               'dni': 'Ya existe una cuenta con ese DNI.',
+            })
+            .having((e) => e.todosLosErrores, 'todosLosErrores', {
+              'email': ['Ya existe una cuenta con ese email.'],
+              'dni': [
+                'Ya existe una cuenta con ese DNI.',
+                'Otro error del DNI.',
+              ],
             }),
       ),
     );
